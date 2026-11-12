@@ -85,21 +85,29 @@ self.addEventListener('activate', (event) => {
   console.log('[SW] Activating service worker...');
   
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    (async () => {
+      const cacheNames = await caches.keys();
+      let deletedOldCache = false;
+      await Promise.all(
         cacheNames.map((cacheName) => {
           // Supprimer les anciens caches
           if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+            deletedOldCache = true;
             console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
+          return undefined;
         })
       );
-    })
+      await self.clients.claim();
+      if (deletedOldCache) {
+        const windowClients = await self.clients.matchAll({ type: 'window' });
+        await Promise.all(
+          windowClients.map((client) => client.navigate(client.url).catch(() => undefined))
+        );
+      }
+    })()
   );
-  
-  // Prend le contrôle de tous les clients immédiatement
-  self.clients.claim();
 });
 
 // Optimisation : Pre-compile des regex pour éviter de les recréer à chaque requête
@@ -153,8 +161,27 @@ self.addEventListener('fetch', (event) => {
   if (activeCacheOperations >= MAX_CONCURRENT_CACHE_OPS) {
     return; // Laisser passer sans cache si trop d'opérations en cours
   }
+
+  // Stratégie Network First pour les documents HTML et navigations SPA afin de toujours servir le dernier build en ligne
+  if (request.mode === 'navigate' || request.destination === 'document' || url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200 && activeCacheOperations < MAX_CONCURRENT_CACHE_OPS) {
+            activeCacheOperations++;
+            const responseClone = networkResponse.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put('/index.html', responseClone)).catch(() => {}).finally(() => {
+              activeCacheOperations--;
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(request).then((cachedResponse) => cachedResponse || caches.match('/index.html') || caches.match('/offline')))
+    );
+    return;
+  }
   
-  // Stratégie pour les fichiers statiques (HTML, CSS, JS, images)
+  // Stratégie pour les fichiers statiques (CSS, JS, images)
   if (STATIC_FILES.includes(url.pathname) || 
       request.destination === 'style' ||
       request.destination === 'script' ||

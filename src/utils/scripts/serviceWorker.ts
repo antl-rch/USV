@@ -48,7 +48,8 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
 
   try {
     console.log('[PWA] Registering service worker...');
-    const registration = await navigator.serviceWorker.register(SW_URL);
+    const registration = await navigator.serviceWorker.register(SW_URL, { updateViaCache: 'none' });
+    registration.update().catch(() => undefined);
 
     console.log('[PWA] Service worker registered successfully');
 
