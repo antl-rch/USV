@@ -670,7 +670,8 @@ export const buildQuotePricingLines = (
       description: clause.description?.trim() || 'Clause tarifaire personnalisée.',
       mode: 'ponctuel' as const,
       included: clause.included,
-      amount: clause.amount ?? 0,
+      ...(clause.offered ? { offered: true } : {}),
+      amount: clause.included ? 0 : clause.amount ?? 0,
       amount_kind: 'currency' as const,
     }));
 
@@ -687,7 +688,8 @@ export const buildProjectQuotePricingLines = (
     description: line.description.trim(),
     mode: 'ponctuel' as const,
     included: line.included,
-    amount: line.amount ?? 0,
+    ...(line.offered ? { offered: true } : {}),
+    amount: line.included ? 0 : line.amount ?? 0,
     amount_kind: 'currency' as const,
   })));
 
@@ -704,7 +706,8 @@ export const buildProjectQuoteSections = (
         label: line.label.trim(),
         description: line.description.trim(),
         included: line.included,
-        amount: line.amount ?? 0,
+        ...(line.offered ? { offered: true } : {}),
+        amount: line.included ? 0 : line.amount ?? 0,
       })),
   }))
   .filter((section) => section.title && section.lines.length > 0);

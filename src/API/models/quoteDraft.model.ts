@@ -2,6 +2,11 @@ import type { QuoteDraftSnapshot, QuoteFormState, LocalQuoteDraft } from '../../
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown): value is string => typeof value === 'string';
 const amount = (value: unknown): boolean => value == null || (typeof value === 'number' && Number.isFinite(value));
+const validPricing = (value: Record<string, unknown>): boolean => typeof value.included === 'boolean'
+  && (value.offered === undefined || value.offered === false || (value.offered === true && value.included))
+  && amount(value.amount);
+const customClause = (value: unknown): boolean => object(value) && text(value.id) && text(value.label)
+  && (value.description === undefined || text(value.description)) && validPricing(value);
 const list = (value: unknown, check: (item: unknown) => boolean): boolean => Array.isArray(value) && value.every(check);
 const form = (value: unknown): value is QuoteFormState => object(value)
   && ['companyName', 'contactName', 'contactRole', 'email', 'phone', 'needSummary', 'objective', 'timeline', 'commercialConditions'].every(key => text(value[key]))
@@ -14,8 +19,7 @@ const serviceBlock = (value: unknown): boolean => object(value) && text(value.id
   && ['commercial', 'qualified_appointment', 'client_account'].includes(String(value.campaignType))
   && text(value.commercialCommissionDescription) && value.commercialCommissionDescription.length <= 2000
   && amount(value.commercialCommissionRate) && amount(value.appointmentRate) && text(value.appointmentDescription)
-  && list(value.customClauses, item => object(item) && text(item.id) && text(item.label)
-    && (item.description === undefined || text(item.description)) && typeof item.included === 'boolean' && amount(item.amount));
+  && list(value.customClauses, customClause);
 export function isQuoteDraftSnapshot(value: unknown): value is QuoteDraftSnapshot {
   return object(value) && (value.additionalServiceBlocks === undefined || (Array.isArray(value.additionalServiceBlocks)
     && value.additionalServiceBlocks.length <= 29 && list(value.additionalServiceBlocks, serviceBlock)
@@ -27,9 +31,9 @@ export function isQuoteDraftSnapshot(value: unknown): value is QuoteDraftSnapsho
     && (value.flexibleServices === undefined || list(value.flexibleServices, item => object(item) && text(item.id) && text(item.label) && text(item.description) && text(item.condition)
       && ['fixed', 'variable'].includes(String(item.pricing)) && ['currency', 'percentage'].includes(String(item.amountKind))
       && (item.pricing !== 'fixed' || item.amountKind === 'currency') && amount(item.amount)))
-    && list(value.customClauses, item => object(item) && text(item.id) && text(item.label) && (item.description === undefined || text(item.description)) && typeof item.included === 'boolean' && amount(item.amount))
+    && list(value.customClauses, customClause)
     && list(value.projectSections, section => object(section) && text(section.id) && text(section.title)
-      && list(section.lines, item => object(item) && text(item.id) && text(item.label) && text(item.description) && typeof item.included === 'boolean' && amount(item.amount)))
+      && list(section.lines, item => object(item) && text(item.id) && text(item.label) && text(item.description) && validPricing(item)))
     && list(value.thirdPartyServices, item => object(item) && text(item.id) && text(item.label) && text(item.description));
 }
 export function parseLocalQuoteDrafts(raw: string | null): LocalQuoteDraft[] {

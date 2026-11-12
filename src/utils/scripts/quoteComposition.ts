@@ -26,10 +26,10 @@ export const getQuoteFixedTotals = (lines: QuotePdfPayload['lines']): { ht: numb
 export const validateQuoteComposition = (sections: QuoteProjectSection[], services: QuoteFlexibleService[]): string | null => {
   for (const section of sections) {
     if (section.lines.some((line) => line.included || line.amount !== undefined) && !section.title.trim()) {
-      return 'Renseignez l’intitulé de chaque phase contenant une prestation chiffrée ou incluse.';
+      return 'Renseignez l’intitulé de chaque phase contenant une prestation tarifée, incluse ou offerte.';
     }
     for (const line of section.lines) {
-      if ((line.included || line.amount !== undefined) && !line.label.trim()) return 'Renseignez l’intitulé de chaque prestation chiffrée ou incluse.';
+      if ((line.included || line.amount !== undefined) && !line.label.trim()) return 'Renseignez l’intitulé de chaque prestation tarifée, incluse ou offerte.';
       if (line.amount !== undefined && (!Number.isFinite(line.amount) || line.amount < 0)) return 'Les montants doivent être positifs ou nuls.';
     }
   }

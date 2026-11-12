@@ -7,9 +7,9 @@ export function useQuoteServiceBlocks() {
   const update = <Field extends keyof Omit<QuoteServiceBlock, 'id'>>(id: string, field: Field, value: QuoteServiceBlock[Field]): void => {
     setBlocks(previous => previous.map(block => block.id === id ? { ...block, [field]: value } : block));
   };
-  const updateClause = <Field extends keyof Omit<QuoteCustomClause, 'id'>>(id: string, clauseId: string, field: Field, value: QuoteCustomClause[Field]): void => {
+  const updateClause = (id: string, clauseId: string, changes: Partial<Omit<QuoteCustomClause, 'id'>>): void => {
     setBlocks(previous => previous.map(block => block.id === id ? { ...block,
-      customClauses: block.customClauses.map(clause => clause.id === clauseId ? { ...clause, [field]: value } : clause),
+      customClauses: block.customClauses.map(clause => clause.id === clauseId ? { ...clause, ...changes } : clause),
     } : block));
   };
   const groups = useMemo(() => blocks.map(block => ({
@@ -48,7 +48,7 @@ export function useQuoteServiceBlocks() {
       id: `clause-${crypto.randomUUID()}`, label: '', description: '', amount: undefined, included: false,
     }]),
     onRemoveCustomClause: (id: string) => update(block.id, 'customClauses', block.customClauses.filter(clause => clause.id !== id)),
-    onUpdateCustomClause: <Field extends keyof Omit<QuoteCustomClause, 'id'>>(id: string, field: Field, value: QuoteCustomClause[Field]) => updateClause(block.id, id, field, value),
+    onUpdateCustomClause: (id: string, changes: Partial<Omit<QuoteCustomClause, 'id'>>) => updateClause(block.id, id, changes),
     onRemove: () => setBlocks(previous => previous.filter(current => current.id !== block.id)),
   }));
   const add = (): void => setBlocks(previous => [...previous, {

@@ -69,7 +69,7 @@ export function useDevisView() {
     [allConquestQuoteLines, projectQuoteLines, flexibleQuoteLines]);
   const fixedTotals = useMemo(() => getQuoteFixedTotals(quoteLines), [quoteLines]);
   const hasFixedLines = quoteLines.some((line) => !line.included && line.amount_kind === 'currency' && (!line.pricing_basis || line.pricing_basis === 'fixed'));
-  const hasConditionalLines = quoteLines.some((line) => line.pricing_basis === 'variable' || line.pricing_basis === 'unit');
+  const hasConditionalLines = quoteLines.some((line) => !line.included && (line.pricing_basis === 'variable' || line.pricing_basis === 'unit'));
   const checklist = getQuoteChecklistProgress(formState, quoteLines.length);
   const selectedAssumptions = selectedTemplates.flatMap((template) => template.assumptions);
   const selectedTemplateTitle = [...selectedTemplates.map((template) => template.title), ...(flexibleQuoteLines.length ? ['Prestations libres et primes'] : [])].join(' + ');
@@ -147,13 +147,12 @@ export function useDevisView() {
     }]);
   };
 
-  const updateCustomClause = <Field extends keyof Omit<QuoteCustomClause, 'id'>>(
+  const updateCustomClause = (
     clauseId: string,
-    field: Field,
-    value: QuoteCustomClause[Field],
+    changes: Partial<Omit<QuoteCustomClause, 'id'>>,
   ): void => {
     setCustomClauses((previous) => previous.map((clause) => (
-      clause.id === clauseId ? { ...clause, [field]: value } : clause
+      clause.id === clauseId ? { ...clause, ...changes } : clause
     )));
   };
 
@@ -179,11 +178,10 @@ export function useDevisView() {
     }));
   };
 
-  const updateProjectLine = <Field extends keyof Omit<QuoteProjectLine, 'id'>>(
+  const updateProjectLine = (
     sectionId: string,
     lineId: string,
-    field: Field,
-    value: QuoteProjectLine[Field],
+    changes: Partial<Omit<QuoteProjectLine, 'id'>>,
   ): void => {
     setProjectSections((previous) => previous.map((section) => {
       if (section.id !== sectionId) return section;
@@ -191,7 +189,7 @@ export function useDevisView() {
       return {
         ...section,
         lines: section.lines.map((line) => (
-          line.id === lineId ? { ...line, [field]: value } : line
+          line.id === lineId ? { ...line, ...changes } : line
         )),
       };
     }));

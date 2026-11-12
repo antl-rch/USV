@@ -77,8 +77,8 @@ export function DevisPreview({
           <div><span>Périmètre</span><strong>{selectedTemplateTitle || QUOTE_CAMPAIGN_TYPE_LABELS[campaignType]}</strong></div>
           {quoteLines.map((line) => (
             <div key={`price-${line.id}`} className={line.included ? '' : 'is-total'}>
-              <span>{line.label}{line.pricing_basis === 'variable' ? ' · Prime variable' : line.pricing_basis === 'unit' ? ' · Tarif unitaire' : ''}</span>
-              <strong>{line.included ? 'Inclus' : line.amount_kind === 'percentage' ? `${line.amount} %` : formatCurrency(line.amount)}</strong>
+              <span>{line.label}{!line.included && (line.pricing_basis === 'variable' ? ' · Prime variable' : line.pricing_basis === 'unit' ? ' · Tarif unitaire' : '')}</span>
+              <strong>{line.offered ? 'Offert' : line.included ? 'Inclus' : line.amount_kind === 'percentage' ? `${line.amount} %` : formatCurrency(line.amount)}</strong>
             </div>
           ))}
           {hasFixedLines && fixedTotals && <>
