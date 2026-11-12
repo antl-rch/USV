@@ -14,7 +14,37 @@ const isProduction = (() => {
 let hasShownUpdateNotification = false;
 let updateCheckInterval: number | null = null;
 let lastUpdateTime = 0; // Timestamp de la dernière mise à jour installée
+let initialBuildSignature: string | null = null;
 const UPDATE_GRACE_PERIOD = 60000; // 60 secondes de grace après une mise à jour
+
+const readBuildSignature = async (): Promise<string | null> => {
+  try {
+    const response = await fetch('/_antl-build.json', { cache: 'no-store' });
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+      return null;
+    }
+    const marker = (await response.json()) as { sha?: string; workflowRun?: string };
+    if (typeof marker?.sha === 'string' && marker.sha.length > 0) {
+      return `${marker.sha}:${marker.workflowRun ?? ''}`;
+    }
+  } catch {
+    // Ignorer en développement ou hors ligne
+  }
+  return null;
+};
+
+const triggerUpdateNotification = (): void => {
+  const timeSinceLastUpdate = Date.now() - lastUpdateTime;
+  if (lastUpdateTime > 0 && timeSinceLastUpdate < UPDATE_GRACE_PERIOD) {
+    console.log('[PWA] Within grace period, skipping notification');
+    return;
+  }
+  if (!hasShownUpdateNotification) {
+    console.log('[PWA] Showing update notification');
+    hasShownUpdateNotification = true;
+    void showUpdateAvailableNotification();
+  }
+};
 
 // Types pour les messages du Service Worker
 interface ServiceWorkerMessage {
@@ -48,44 +78,41 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
 
   try {
     console.log('[PWA] Registering service worker...');
+    const hadController = Boolean(navigator.serviceWorker.controller);
     const registration = await navigator.serviceWorker.register(SW_URL, { updateViaCache: 'none' });
-    registration.update().catch(() => undefined);
 
     console.log('[PWA] Service worker registered successfully');
 
-    // Écouter les mises à jour du Service Worker
-    registration.addEventListener('updatefound', () => {
-      const newWorker = registration.installing;
-      if (!newWorker) return;
-
+    const watchInstallingWorker = (worker: ServiceWorker | null) => {
+      if (!worker) return;
       console.log('[PWA] New service worker found...');
-
-      // Écouter l'état du nouveau worker
-      newWorker.addEventListener('statechange', () => {
-        // Quand le nouveau worker est installé et qu'il y a un worker actif (mise à jour disponible)
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+      if (worker.state === 'installed' && (hadController || navigator.serviceWorker.controller)) {
+        triggerUpdateNotification();
+        return;
+      }
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && (hadController || navigator.serviceWorker.controller)) {
           console.log('[PWA] Service worker update detected');
-
-          // Vérifier si on est dans la période de grace après une mise à jour
-          const timeSinceLastUpdate = Date.now() - lastUpdateTime;
-          if (timeSinceLastUpdate < UPDATE_GRACE_PERIOD) {
-            console.log('[PWA] Within grace period, skipping notification');
-            return;
-          }
-
-          //Notifier seulement si pas déjà notifié
-          if (!hasShownUpdateNotification) {
-            console.log('[PWA] Showing update notification');
-            hasShownUpdateNotification = true;
-            showUpdateAvailableNotification();
-          }
-        } else if (newWorker.state === 'activated') {
-          // Le nouveau worker est activé après skipWaiting
+          triggerUpdateNotification();
+        } else if (worker.state === 'activated') {
           console.log('[PWA] Service worker activated');
-          lastUpdateTime = Date.now(); // Enregistrer le timestamp de la mise à jour
         }
       });
+    };
+
+    if (registration.waiting && (hadController || navigator.serviceWorker.controller)) {
+      triggerUpdateNotification();
+    }
+    if (registration.installing) {
+      watchInstallingWorker(registration.installing);
+    }
+
+    // Écouter les mises à jour du Service Worker avant de lancer update()
+    registration.addEventListener('updatefound', () => {
+      watchInstallingWorker(registration.installing);
     });
+
+    registration.update().catch(() => undefined);
 
     return registration;
   } catch (error) {
@@ -163,6 +190,7 @@ export const skipWaiting = async (): Promise<void> => {
   // Reset le flag après installation
   hasShownUpdateNotification = false;
 
+  await sendMessageToServiceWorker({ type: 'CLEAR_CACHE' });
   await sendMessageToServiceWorker({ type: 'SKIP_WAITING' });
   window.location.reload();
 };
@@ -203,11 +231,21 @@ export const checkForNewVersion = async (): Promise<boolean> => {
   try {
     const registration = await navigator.serviceWorker.getRegistration();
     if (registration) {
-      // Forcer la vérification des mises à jour
+      // Forcer la vérification des mises à jour du Service Worker
       await registration.update();
-      
-      // Vérifier s'il y a un nouveau worker en attente
-      return !!registration.waiting || !!registration.installing;
+
+      if (registration.waiting || registration.installing) {
+        return true;
+      }
+    }
+
+    const latestBuildSignature = await readBuildSignature();
+    if (latestBuildSignature) {
+      if (!initialBuildSignature) {
+        initialBuildSignature = latestBuildSignature;
+      } else if (latestBuildSignature !== initialBuildSignature) {
+        return true;
+      }
     }
   } catch (error) {
     console.error('[SW] Failed to check for updates:', error);
@@ -269,23 +307,41 @@ const showUpdateAvailableNotification = async (): Promise<void> => {
 
 // Vérification automatique périodique des mises à jour
 export const startUpdateChecker = (): (() => void) => {
-  const checkInterval = 5 * 60 * 1000; // 5 minutes
+  const checkInterval = 60 * 1000; // 1 minute
 
   // Nettoyer l'intervalle précédent s'il existe
   if (updateCheckInterval !== null) {
     clearInterval(updateCheckInterval);
   }
 
-  updateCheckInterval = window.setInterval(async () => {
+  const runCheck = async () => {
     const hasUpdate = await checkForNewVersion();
-    if (hasUpdate && !hasShownUpdateNotification) {
-      hasShownUpdateNotification = true;
-      await showUpdateAvailableNotification();
+    if (hasUpdate) {
+      triggerUpdateNotification();
     }
+  };
+
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      void runCheck();
+    }
+  };
+
+  const handleWindowFocus = () => {
+    void runCheck();
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('focus', handleWindowFocus);
+
+  updateCheckInterval = window.setInterval(() => {
+    void runCheck();
   }, checkInterval);
 
   // Retourner une fonction pour nettoyer l'interval
   return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('focus', handleWindowFocus);
     if (updateCheckInterval !== null) {
       clearInterval(updateCheckInterval);
       updateCheckInterval = null;
@@ -359,15 +415,12 @@ export const initializePWA = async (): Promise<void> => {
     console.log('[PWA] Development mode - PWA features limited');
   }
 
-  // Initialiser le timestamp au démarrage pour éviter la période de grace au premier chargement
-  if (lastUpdateTime === 0) {
-    lastUpdateTime = Date.now();
-    console.log('[PWA] Initialized lastUpdateTime');
-  }
-
   // Reset le flag de notification au démarrage pour permettre les notifications
   hasShownUpdateNotification = false;
   console.log('[PWA] Reset hasShownUpdateNotification flag');
+
+  // Mémoriser l'empreinte du build courant pour détecter les futures livraisons Cloudflare
+  initialBuildSignature = await readBuildSignature();
 
   // Enregistrer le Service Worker
   const registration = await registerServiceWorker();
