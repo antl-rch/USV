@@ -38,18 +38,11 @@ if (isDevelopment) {
 
 // Fichiers à mettre en cache lors de l'installation
 const STATIC_FILES = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/favicon.ico',
   '/android-chrome-192x192.png',
   '/android-chrome-512x512.png',
   '/apple-touch-icon.png',
-  // Pages principales
-  '/utils/mail',
-  '/courriers/nouveau',
-  '/courriers/liste',
-  '/auth',
   // Offline fallback
   '/offline'
 ];
@@ -87,12 +80,10 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const cacheNames = await caches.keys();
-      let deletedOldCache = false;
       await Promise.all(
         cacheNames.map((cacheName) => {
           // Supprimer les anciens caches
           if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-            deletedOldCache = true;
             console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
@@ -100,12 +91,6 @@ self.addEventListener('activate', (event) => {
         })
       );
       await self.clients.claim();
-      if (deletedOldCache) {
-        const windowClients = await self.clients.matchAll({ type: 'window' });
-        await Promise.all(
-          windowClients.map((client) => client.navigate(client.url).catch(() => undefined))
-        );
-      }
     })()
   );
 });

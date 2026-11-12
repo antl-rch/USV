@@ -157,8 +157,8 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
   // Écouter les événements PWA pour les alertes depuis le service worker
   useEffect(() => {
     const handlePWAConfirm = (event: CustomEvent) => {
-      const { title, message, resolve } = event.detail;
-      showConfirm(message, title).then(resolve);
+      const { title, message, confirmText, cancelText, resolve } = event.detail;
+      showConfirm(message, title, confirmText, cancelText).then(resolve);
     };
 
     const handlePWAInfo = (event: CustomEvent) => {

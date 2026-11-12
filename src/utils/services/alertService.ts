@@ -13,10 +13,15 @@ interface PWAAlertOptions {
 
 // Instance singleton du service d'alerte
 let alertService: AlertContextType | null = null;
+const pendingServiceWaiters: Array<(context: AlertContextType) => void> = [];
 
 // Initialise le service avec le contexte d'alerte
 export const initializeAlertService = (context: AlertContextType): void => {
   alertService = context;
+  while (pendingServiceWaiters.length > 0) {
+    const waiter = pendingServiceWaiters.shift();
+    waiter?.(context);
+  }
 };
 
 // Vérifie que le service est initialisé
@@ -71,22 +76,36 @@ export const getAlertService = (): AlertContextType => {
 // Fonctions PWA spéciales qui créent des événements personnalisés pour communiquer avec React
 export const showPWAUpdatePrompt = (options: PWAAlertOptions): Promise<boolean> => {
   return new Promise((resolve) => {
-    // Si le service React est disponible, l'utiliser
+    let settled = false;
+    const finish = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    // Si le service React est disponible, l'utiliser directement avec les libellés personnalisés
     if (alertService) {
-      alertService.showConfirm(options.message, options.title).then(resolve);
+      alertService.showConfirm(options.message, options.title, options.confirmText, options.cancelText).then(finish);
       return;
     }
 
-    // Sinon, créer un événement personnalisé que React peut écouter
-    const eventDetail = { ...options, resolve };
+    // Si React est en cours de montage, attendre l'initialisation d'AlertProvider
+    pendingServiceWaiters.push((service) => {
+      service.showConfirm(options.message, options.title, options.confirmText, options.cancelText).then(finish);
+    });
+
+    // Créer aussi l'événement personnalisé au cas où AlertProvider écoute déjà
+    const eventDetail = { ...options, resolve: finish };
     const event = new CustomEvent('pwa-confirm-needed', { detail: eventDetail });
     window.dispatchEvent(event);
 
-    // Fallback après 5 secondes si React ne répond pas
+    // Fallback après 10 secondes si React ne répond toujours pas
     setTimeout(() => {
-      const fallbackResult = window.confirm(`${options.title}\n\n${options.message}`);
-      resolve(fallbackResult);
-    }, 5000);
+      if (!settled) {
+        const fallbackResult = window.confirm(`${options.title}\n\n${options.message}`);
+        finish(fallbackResult);
+      }
+    }, 10000);
   });
 };
 
