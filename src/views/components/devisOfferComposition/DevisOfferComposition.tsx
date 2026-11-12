@@ -205,7 +205,7 @@ export function DevisOfferComposition({
 
         <div className="devisView__third-party-services">
           <strong>Services & abonnements tiers à la charge du client</strong>
-          <span>Ils seront listés sur la dernière page du devis.</span>
+          <span>Ils seront listés après le périmètre détaillé, avant le récapitulatif financier.</span>
           <div className="devisView__third-party-editor">
             {thirdPartyServices.map((service) => (
               <div key={service.id}>
