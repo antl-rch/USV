@@ -24,6 +24,7 @@ export type QuoteCustomClause = {
   description?: string;
   amount: number | undefined;
   included: boolean;
+  offered?: boolean;
 };
 
 export type QuoteProjectLine = {
@@ -34,6 +35,7 @@ export type QuoteProjectLine = {
   descriptionPlaceholder?: string;
   amount: number | undefined;
   included: boolean;
+  offered?: boolean;
   isCustom?: boolean;
 };
 
@@ -127,6 +129,7 @@ export type QuotePdfPayload = {
     description: string;
     mode: PriceMode;
     included: boolean;
+    offered?: boolean;
     amount: number;
     amount_kind: 'currency' | 'percentage';
     pricing_basis?: 'fixed' | 'variable' | 'unit';
@@ -141,6 +144,7 @@ export type QuotePdfPayload = {
       label: string;
       description: string;
       included: boolean;
+      offered?: boolean;
       amount: number;
       amount_kind?: 'currency' | 'percentage';
       pricing_basis?: 'fixed' | 'variable' | 'unit';

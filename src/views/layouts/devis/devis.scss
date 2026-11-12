@@ -450,18 +450,6 @@
   text-align: right;
   font-weight: 700;
 }
-#devisView .devisView__custom-clause > label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35em;
-  color: vars.$fontColorSecondary;
-  font-size: 0.82rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-#devisView .devisView__custom-clause input[type='checkbox'] {
-  accent-color: vars.$utilsPrimary;
-}
 #devisView .devisView__custom-clause > button {
   @include mixins.resetButton;
   display: inline-flex;
@@ -590,15 +578,27 @@
   color: vars.$fontColorSecondary;
   font-weight: 700;
 }
-#devisView .devisView__included-toggle {
+#devisView .devisView__pricing-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em 0.65em;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#devisView .devisView__pricing-options label {
   display: inline-flex;
   align-items: center;
-  gap: 0.4em;
+  gap: 0.35em;
   color: vars.$fontColorSecondary;
   font-size: 0.82rem;
   font-weight: 700;
 }
-#devisView .devisView__included-toggle input {
+
+#devisView .devisView__pricing-options input {
+  margin: 0;
   accent-color: vars.$utilsPrimary;
 }
 #devisView .devisView__project-line-controls > button {
@@ -679,13 +679,23 @@
     grid-column: 1 / -1;
   }
 
+  #devisView .devisView__custom-clause .devisView__pricing-options {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+
   #devisView .devisView__project-line {
     grid-template-columns: 1fr;
   }
 
   #devisView .devisView__project-line-controls {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
+  }
+
+  #devisView .devisView__project-line-controls .devisView__pricing-options {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   #devisView .devisView__third-party-editor > div {

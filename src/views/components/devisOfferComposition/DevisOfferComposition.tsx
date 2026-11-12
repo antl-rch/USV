@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useId, type ReactElement } from 'react';
 import { MdAdd, MdClose, MdFactCheck } from 'react-icons/md';
 import Select from 'react-select';
 import type { StylesConfig } from 'react-select';
@@ -42,17 +42,8 @@ interface DevisOfferCompositionProps {
   onRemoveCustomClause: (clauseId: string) => void;
   onRemoveProjectLine: (sectionId: string, lineId: string) => void;
   onRemoveThirdPartyService: (serviceId: string) => void;
-  onUpdateCustomClause: <Field extends keyof Omit<QuoteCustomClause, 'id'>>(
-    clauseId: string,
-    field: Field,
-    value: QuoteCustomClause[Field],
-  ) => void;
-  onUpdateProjectLine: <Field extends keyof Omit<QuoteProjectLine, 'id'>>(
-    sectionId: string,
-    lineId: string,
-    field: Field,
-    value: QuoteProjectLine[Field],
-  ) => void;
+  onUpdateCustomClause: (clauseId: string, changes: Partial<Omit<QuoteCustomClause, 'id'>>) => void;
+  onUpdateProjectLine: (sectionId: string, lineId: string, changes: Partial<Omit<QuoteProjectLine, 'id'>>) => void;
   onUpdateProjectSectionTitle: (sectionId: string, title: string) => void;
   onUpdateThirdPartyService: <Field extends keyof Omit<QuoteThirdPartyService, 'id'>>(
     serviceId: string,
@@ -72,6 +63,36 @@ const campaignTypeOptions: CampaignTypeOption[] = Object.entries(QUOTE_CAMPAIGN_
 }));
 
 const getOptionalAmount = (value: string): number | undefined => (value === '' ? undefined : Number(value));
+
+const pricingOptions = [
+  { label: 'Tarifé', included: false, offered: false },
+  { label: 'Inclus', included: true, offered: false },
+  { label: 'Offert', included: true, offered: true },
+] as const;
+
+type FreePricing = Pick<QuoteProjectLine, 'included' | 'offered'>;
+
+function QuotePricingOptions({ included, offered, onChange }: FreePricing & {
+  onChange: (pricing: FreePricing) => void;
+}): ReactElement {
+  const name = useId();
+
+  return (
+    <fieldset className="devisView__pricing-options" aria-label="Tarification">
+      {pricingOptions.map((option) => (
+        <label key={option.label}>
+          <input
+            type="radio"
+            name={name}
+            checked={included === option.included && Boolean(offered) === option.offered}
+            onChange={() => onChange({ included: option.included, offered: option.offered })}
+          />
+          <span>{option.label}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
 
 export function DevisOfferComposition({
   conquestSectionTitle,
@@ -135,13 +156,13 @@ export function DevisOfferComposition({
                         aria-label="Intitulé de la prestation"
                         placeholder={line.labelPlaceholder || 'Intitulé de la prestation'}
                         value={line.label}
-                        onChange={(event) => onUpdateProjectLine(section.id, line.id, 'label', event.target.value)}
+                        onChange={(event) => onUpdateProjectLine(section.id, line.id, { label: event.target.value })}
                       />
                       <textarea
                         aria-label="Description de la prestation"
                         placeholder={line.descriptionPlaceholder || 'Description, livrables et périmètre'}
                         value={line.description}
-                        onChange={(event) => onUpdateProjectLine(section.id, line.id, 'description', event.target.value)}
+                        onChange={(event) => onUpdateProjectLine(section.id, line.id, { description: event.target.value })}
                       />
                     </div>
                     <div className="devisView__project-line-controls">
@@ -154,19 +175,16 @@ export function DevisOfferComposition({
                             step="1"
                             type="number"
                             value={line.amount ?? ''}
-                            onChange={(event) => onUpdateProjectLine(section.id, line.id, 'amount', getOptionalAmount(event.target.value))}
+                            onChange={(event) => onUpdateProjectLine(section.id, line.id, { amount: getOptionalAmount(event.target.value) })}
                           />
                           <small>€</small>
                         </div>
                       </label>
-                      <label className="devisView__included-toggle">
-                        <input
-                          type="checkbox"
-                          checked={line.included}
-                          onChange={(event) => onUpdateProjectLine(section.id, line.id, 'included', event.target.checked)}
-                        />
-                        <span>Inclus</span>
-                      </label>
+                      <QuotePricingOptions
+                        included={line.included}
+                        offered={line.offered}
+                        onChange={(pricing) => onUpdateProjectLine(section.id, line.id, pricing)}
+                      />
                       {line.isCustom && (
                         <button type="button" aria-label="Supprimer la prestation" onClick={() => onRemoveProjectLine(section.id, line.id)}>
                           <MdClose />
@@ -322,7 +340,7 @@ export function DevisOfferComposition({
                   aria-label="Intitulé de la clause"
                   placeholder="Clause tarifaire"
                   value={clause.label}
-                  onChange={(event) => onUpdateCustomClause(clause.id, 'label', event.target.value)}
+                  onChange={(event) => onUpdateCustomClause(clause.id, { label: event.target.value })}
                 />
                 <textarea
                   className="devisView__clause-description"
@@ -331,7 +349,7 @@ export function DevisOfferComposition({
                   rows={2}
                   maxLength={2000}
                   value={clause.description ?? ''}
-                  onChange={(event) => onUpdateCustomClause(clause.id, 'description', event.target.value)}
+                  onChange={(event) => onUpdateCustomClause(clause.id, { description: event.target.value })}
                 />
                 <input
                   aria-label="Montant de la clause"
@@ -340,16 +358,13 @@ export function DevisOfferComposition({
                   step="1"
                   type="number"
                   value={clause.amount ?? ''}
-                  onChange={(event) => onUpdateCustomClause(clause.id, 'amount', getOptionalAmount(event.target.value))}
+                  onChange={(event) => onUpdateCustomClause(clause.id, { amount: getOptionalAmount(event.target.value) })}
                 />
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={clause.included}
-                    onChange={(event) => onUpdateCustomClause(clause.id, 'included', event.target.checked)}
-                  />
-                  <span>Inclus</span>
-                </label>
+                <QuotePricingOptions
+                  included={clause.included}
+                  offered={clause.offered}
+                  onChange={(pricing) => onUpdateCustomClause(clause.id, pricing)}
+                />
                 <button type="button" aria-label="Supprimer la clause" onClick={() => onRemoveCustomClause(clause.id)}>
                   <MdClose />
                 </button>

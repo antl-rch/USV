@@ -69,6 +69,37 @@ test('un devis incomplet survit au rechargement, se reprend, conserve ses tarifs
   await expect(page.getByRole('button', { name: 'Reprendre le devis', exact: true })).toHaveCount(0);
 });
 
+test('Offert et Inclus sont exclusifs et la mention offerte est conservée dans le brouillon et le PDF', async ({ page }) => {
+  const api = await installDraftApi(page);
+  const draft = quoteDraftFixture(completeQuoteSnapshot());
+  api.drafts.set(draft.id, draft);
+  await page.goto('/commercial/devis');
+  await page.getByRole('button', { name: 'Reprendre le devis', exact: true }).click();
+
+  const clause = page.locator('.devisView__custom-clause').filter({ has: page.locator('input[value="Qualification du fichier"]') });
+  const line = page.locator('.devisView__project-line').filter({ has: page.locator('input[value="Formation des équipes"]') });
+  await expect(clause.getByRole('radio', { name: 'Inclus' })).toBeChecked();
+  await line.getByRole('radio', { name: 'Inclus' }).check();
+  await line.getByRole('radio', { name: 'Offert' }).check();
+  await expect(line.getByRole('radio', { name: 'Inclus' })).not.toBeChecked();
+  await expect(line.getByRole('spinbutton')).toBeDisabled();
+  await expect.poll(() => api.drafts.get(draft.id)?.snapshot.projectSections.at(-1)?.lines[0].offered).toBe(true);
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Reprendre le devis', exact: true }).click();
+  await expect(line.getByRole('radio', { name: 'Offert' })).toBeChecked();
+  await line.getByRole('radio', { name: 'Tarifé' }).check();
+  await expect(line.getByRole('spinbutton')).toHaveValue('850.75');
+  await line.getByRole('radio', { name: 'Offert' }).check();
+  await page.getByRole('button', { name: 'Éditer le devis', exact: true }).click();
+  await expect.poll(() => api.generated.length).toBe(1);
+  const offered = expect.objectContaining({ id: 'prestation-ajoutee', included: true, offered: true, amount: 0 });
+  expect(api.generated[0]).toMatchObject({
+    lines: expect.arrayContaining([offered]),
+    project_sections: expect.arrayContaining([expect.objectContaining({ lines: [offered] })]),
+  });
+});
+
 test('une panne réseau conserve la saisie locale pour la reprise', async ({ page }) => {
   const api = await installDraftApi(page, { offline: true });
   await page.goto('/commercial/devis');

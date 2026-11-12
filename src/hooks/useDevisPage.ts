@@ -33,11 +33,12 @@ export function useDevisPage() {
       title: devis.conquestSectionTitle.trim() || 'Prestations',
       show_title: Boolean(devis.conquestSectionTitle.trim()),
       lines: devis.conquestQuoteLines
-        .map(({ id, label, description, included, amount, amount_kind, pricing_basis }) => ({
+        .map(({ id, label, description, included, offered, amount, amount_kind, pricing_basis }) => ({
           id,
           label,
           description,
           included,
+          ...(offered ? { offered: true } : {}),
           amount,
           amount_kind,
           ...(devis.flexibleQuoteLines.length || devis.additionalServiceGroups.some(group => group.lines.length > 0) ? { pricing_basis } : {}),
@@ -45,7 +46,7 @@ export function useDevisPage() {
     }] : [];
 
     if (!companyName || quoteLines.length === 0) {
-      await showError('Renseignez l’entreprise et au moins une ligne incluse ou chiffrée avant de générer le devis.', 'Devis incomplet');
+      await showError('Renseignez l’entreprise et au moins une prestation tarifée, incluse ou offerte avant de générer le devis.', 'Devis incomplet');
       return;
     }
 
