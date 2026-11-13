@@ -695,4 +695,4 @@ export * from './prospectTargetingGuided.ts';
 
 export { getMonthlyCommercialMonth, isMonthlyCommercialMonthValid, formatMonthlyCommercialMonth } from './monthlyCommercial.ts';
 
-export { buildFlexibleQuoteLines, getQuoteFixedTotals, validateQuoteComposition } from './quoteComposition.ts';
+export { buildFlexibleQuoteLines, getQuoteFixedTotals, isQuoteFixedLine, validateQuoteComposition } from './quoteComposition.ts';

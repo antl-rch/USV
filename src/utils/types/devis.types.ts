@@ -12,6 +12,7 @@ export type QuoteFlexibleService = {
   id: string;
   label: string;
   description: string;
+  kind: 'prestation' | 'prime';
   pricing: 'fixed' | 'variable';
   amountKind: 'currency' | 'percentage';
   amount: number | undefined;
@@ -132,6 +133,7 @@ export type QuotePdfPayload = {
     offered?: boolean;
     amount: number;
     amount_kind: 'currency' | 'percentage';
+    line_type?: QuoteFlexibleService['kind'];
     pricing_basis?: 'fixed' | 'variable' | 'unit';
   }>;
   assumptions: string[];
@@ -147,6 +149,7 @@ export type QuotePdfPayload = {
       offered?: boolean;
       amount: number;
       amount_kind?: 'currency' | 'percentage';
+      line_type?: QuoteFlexibleService['kind'];
       pricing_basis?: 'fixed' | 'variable' | 'unit';
     }>;
   }>;

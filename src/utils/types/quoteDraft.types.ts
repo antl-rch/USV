@@ -24,7 +24,7 @@ export interface QuoteDraftSnapshot {
   commercialCommissionRate: number | null;
   appointmentRate: number | null;
   appointmentDescription: string;
-  flexibleServices?: QuoteFlexibleService[];
+  flexibleServices?: Array<Omit<QuoteFlexibleService, 'kind'> & Partial<Pick<QuoteFlexibleService, 'kind'>>>;
   customClauses: QuoteCustomClause[];
   projectSections: QuoteProjectSection[];
   thirdPartyServices: QuoteThirdPartyService[];

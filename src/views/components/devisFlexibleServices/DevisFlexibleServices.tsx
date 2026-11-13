@@ -9,6 +9,11 @@ import { DevisSectionHeading } from '../devisSectionHeading/index.ts';
 
 type PricingOption = { value: QuoteFlexibleService['pricing']; label: string };
 type AmountKindOption = { value: QuoteFlexibleService['amountKind']; label: string };
+type ServiceKindOption = { value: QuoteFlexibleService['kind']; label: string };
+const serviceKindOptions: ServiceKindOption[] = [
+  { value: 'prestation', label: 'Prestation' },
+  { value: 'prime', label: 'Prime' },
+];
 const pricingOptions: PricingOption[] = [
   { value: 'fixed', label: 'Coût fixe' },
   { value: 'variable', label: 'Prime variable / au résultat' },
@@ -40,10 +45,24 @@ export function DevisFlexibleServices({ sectionTitle, lineCount, onSectionTitleC
     <section className="devisView__project-section devisView__flexible-services">
     <DevisSectionHeading label="Intitulé de la section prestations libres" value={sectionTitle} lineCount={lineCount} onChange={onSectionTitleChange} />
     <p className="devisView__project-description-help">Le titre est libre. Seul un intitulé saisi sera repris dans le document.</p>
-    <p className="devisView__section-description">Ajoutez un forfait, une action commerciale ou une prime au résultat. Les primes et tarifs unitaires sont présentés séparément du total fixe.</p>
+    <p className="devisView__section-description">Les prestations entrent dans le total fixe. Les primes et tarifs unitaires sont indiqués à part sur le devis.</p>
     {services.map((service) => <fieldset key={service.id} className="devisView__flexible-service">
       <legend>Prestation ou prime</legend>
       <div className="devisView__form-grid">
+        <label className="devisView__field"><span>Type de ligne</span>
+          <Select<ServiceKindOption, false>
+            aria-label="Type de ligne"
+            className="react-select-container"
+            classNamePrefix="react-select"
+            isSearchable={false}
+            menuPortalTarget={document.body}
+            menuPosition="fixed"
+            options={serviceKindOptions}
+            styles={devisSelectStyles as StylesConfig<ServiceKindOption, false>}
+            value={serviceKindOptions.find((option) => option.value === service.kind)}
+            onChange={(option) => option && onUpdate(service.id, 'kind', option.value)}
+          />
+        </label>
         <label className="devisView__field"><span>Intitulé</span><input aria-label="Intitulé de la prestation libre" value={service.label}
           onChange={(event) => onUpdate(service.id, 'label', event.target.value)} placeholder="Ex. Action commerciale / Prime par client apporté" /></label>
         <label className="devisView__field"><span>Rémunération</span>
@@ -52,6 +71,7 @@ export function DevisFlexibleServices({ sectionTitle, lineCount, onSectionTitleC
             className="react-select-container devisView__service-pricing-select"
             classNamePrefix="react-select"
             isSearchable={false}
+            isDisabled={service.kind === 'prestation'}
             menuPortalTarget={document.body}
             menuPosition="fixed"
             options={pricingOptions}
@@ -76,7 +96,7 @@ export function DevisFlexibleServices({ sectionTitle, lineCount, onSectionTitleC
             value={amountKindOptions.find((option) => option.value === service.amountKind) ?? null}
             onChange={(option) => option && onUpdate(service.id, 'amountKind', option.value)}
           />
-          {service.pricing === 'fixed' && <small className="devisView__project-description-help">Un coût fixe est exprimé en euros HT. Le pourcentage est disponible pour une prime variable.</small>}
+          {service.kind === 'prime' && service.pricing === 'fixed' && <small className="devisView__project-description-help">Le pourcentage est disponible pour une prime variable.</small>}
         </label>
         <label className="devisView__field devisView__field--full"><span>Description</span><textarea aria-label="Description de la prestation libre" rows={2} value={service.description}
           onChange={(event) => onUpdate(service.id, 'description', event.target.value)} /></label>
@@ -86,7 +106,7 @@ export function DevisFlexibleServices({ sectionTitle, lineCount, onSectionTitleC
       </div>
       <div className="devisView__service-actions">
         <Button style="white" className="devisView__remove-service" onClick={() => onRemove(service.id)}>
-          <MdDeleteOutline aria-hidden="true" /><span>Supprimer cette prestation</span>
+          <MdDeleteOutline aria-hidden="true" /><span>{service.kind === 'prime' ? 'Supprimer cette prime' : 'Supprimer cette prestation'}</span>
         </Button>
       </div>
     </fieldset>)}

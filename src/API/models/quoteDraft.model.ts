@@ -29,6 +29,7 @@ export function isQuoteDraftSnapshot(value: unknown): value is QuoteDraftSnapsho
     && list(value.selectedTemplateIds, text) && ['commercial', 'qualified_appointment', 'client_account'].includes(String(value.campaignType))
     && amount(value.commercialCommissionRate) && amount(value.appointmentRate) && text(value.appointmentDescription)
     && (value.flexibleServices === undefined || list(value.flexibleServices, item => object(item) && text(item.id) && text(item.label) && text(item.description) && text(item.condition)
+      && (item.kind === undefined || item.kind === 'prime' || (item.kind === 'prestation' && item.pricing === 'fixed'))
       && ['fixed', 'variable'].includes(String(item.pricing)) && ['currency', 'percentage'].includes(String(item.amountKind))
       && (item.pricing !== 'fixed' || item.amountKind === 'currency') && amount(item.amount)))
     && list(value.customClauses, customClause)

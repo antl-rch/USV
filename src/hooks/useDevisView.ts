@@ -12,6 +12,7 @@ import {
   QUOTE_TEMPLATES,
   buildFlexibleQuoteLines,
   getQuoteFixedTotals,
+  isQuoteFixedLine,
   getQuoteChecklistProgress,
   getSelectedQuoteTemplates,
 } from '../utils/scripts/index.ts';
@@ -68,8 +69,9 @@ export function useDevisView() {
   const quoteLines = useMemo(() => [...allConquestQuoteLines, ...flexibleQuoteLines, ...projectQuoteLines],
     [allConquestQuoteLines, projectQuoteLines, flexibleQuoteLines]);
   const fixedTotals = useMemo(() => getQuoteFixedTotals(quoteLines), [quoteLines]);
-  const hasFixedLines = quoteLines.some((line) => !line.included && line.amount_kind === 'currency' && (!line.pricing_basis || line.pricing_basis === 'fixed'));
-  const hasConditionalLines = quoteLines.some((line) => !line.included && (line.pricing_basis === 'variable' || line.pricing_basis === 'unit'));
+  const hasFixedLines = quoteLines.some(isQuoteFixedLine);
+  const hasConditionalLines = quoteLines.some((line) => !line.included
+    && (line.line_type === 'prime' || line.pricing_basis === 'variable' || line.pricing_basis === 'unit'));
   const checklist = getQuoteChecklistProgress(formState, quoteLines.length);
   const selectedAssumptions = selectedTemplates.flatMap((template) => template.assumptions);
   const selectedTemplateTitle = [...selectedTemplates.map((template) => template.title), ...(flexibleQuoteLines.length ? ['Prestations libres et primes'] : [])].join(' + ');
@@ -98,21 +100,32 @@ export function useDevisView() {
     setCustomClauses(saved.customClauses.map(clause => ({ ...clause, amount: clause.amount ?? undefined })));
     setProjectSections(saved.projectSections.map(section => ({ ...section, lines: section.lines.map(line => ({ ...line, amount: line.amount ?? undefined })) })));
     setThirdPartyServices(saved.thirdPartyServices.map(service => ({ ...service })));
-    setFlexibleServices((saved.flexibleServices ?? []).map(service => ({ ...service, amount: service.amount ?? undefined })));
+    setFlexibleServices((saved.flexibleServices ?? []).map(service => ({
+      ...service,
+      kind: service.kind ?? (service.pricing === 'variable' ? 'prime' : 'prestation'),
+      amount: service.amount ?? undefined,
+    })));
   }, [restoreServiceBlocks]);
 
   const addFlexibleService = (): void => {
     setFlexibleServices((previous) => [...previous, {
       id: `service-${Date.now()}-${previous.length}`, label: '', description: '', pricing: 'fixed',
-      amountKind: 'currency', amount: undefined, condition: '',
+      kind: 'prestation', amountKind: 'currency', amount: undefined, condition: '',
     }]);
   };
   const updateFlexibleService = <Field extends keyof Omit<QuoteFlexibleService, 'id'>>(
     id: string, field: Field, value: QuoteFlexibleService[Field],
   ): void => {
-    setFlexibleServices((previous) => previous.map((service) => service.id === id
-      ? { ...service, [field]: value, ...(field === 'pricing' && value === 'fixed' ? { amountKind: 'currency' as const } : {}) }
-      : service));
+    setFlexibleServices((previous) => previous.map((service) => {
+      if (service.id !== id) return service;
+      const updated = { ...service, [field]: value };
+      if (updated.kind === 'prestation') updated.pricing = 'fixed';
+      if (updated.pricing === 'fixed' && updated.amountKind === 'percentage') {
+        updated.amountKind = 'currency';
+        updated.amount = undefined;
+      }
+      return updated;
+    }));
   };
   const removeFlexibleService = (id: string): void => setFlexibleServices((previous) => previous.filter((service) => service.id !== id));
   const addProjectSection = (): void => setProjectSections((previous) => [...previous, {
