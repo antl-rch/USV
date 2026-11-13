@@ -15,11 +15,15 @@ export const buildFlexibleQuoteLines = (services: QuoteFlexibleService[]): Quote
     amount: service.amount ?? 0,
     amount_kind: service.amountKind,
     pricing_basis: service.pricing,
+    line_type: service.kind,
   }));
 
+export const isQuoteFixedLine = (line: QuotePdfPayload['lines'][number]): boolean =>
+  !line.included && line.line_type !== 'prime' && line.amount_kind === 'currency'
+    && (!line.pricing_basis || line.pricing_basis === 'fixed');
+
 export const getQuoteFixedTotals = (lines: QuotePdfPayload['lines']): { ht: number; ttc: number } => {
-  const ht = lines.filter((line) => !line.included && line.amount_kind === 'currency'
-    && (!line.pricing_basis || line.pricing_basis === 'fixed')).reduce((sum, line) => sum + line.amount, 0);
+  const ht = lines.filter(isQuoteFixedLine).reduce((sum, line) => sum + line.amount, 0);
   return { ht, ttc: ht * 1.2 };
 };
 
