@@ -274,3 +274,5 @@ export type { ProspectTransferViewModel } from './useProspectTransfer.ts';
 export { useProspectTransferHistory } from './useProspectTransferHistory.ts';
 
 export { useMonthlyPrimeAdjustments } from './useMonthlyPrimeAdjustments.ts';
+
+export { useScriptDocuments } from './useScriptDocuments.ts';

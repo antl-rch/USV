@@ -1,9 +1,16 @@
 import { useEffect, useRef } from 'react';
 import type { ReactElement } from 'react';
 import { IoClose } from 'react-icons/io5';
+import Select from 'react-select';
 import type { CampagneFormViewModel } from '../../../hooks/index.ts';
 import { LEAD_BOOKING_WEEKDAY_OPTIONS } from '../../../utils/scripts/index.ts';
 import './campagneLeadSchedule.scss';
+
+const INTERVAL_OPTIONS = [
+  { value: 15, label: 'Quart d’heure' },
+  { value: 30, label: 'Demi-heure' },
+  { value: 60, label: 'Heure' },
+] as const;
 
 export function CampagneLeadSchedule({ viewModel }: { viewModel: CampagneFormViewModel }): ReactElement {
   const schedule = viewModel.campaignForm.leadSchedule;
@@ -20,9 +27,19 @@ export function CampagneLeadSchedule({ viewModel }: { viewModel: CampagneFormVie
         <button type="button" onClick={schedule.close} aria-label="Fermer"><IoClose aria-hidden="true" /></button>
       </div>
       <p>Une semaine type : cliquez sur une heure de début pour l’ouvrir ou la fermer. Les créneaux violets sont ouverts.</p>
-      <label>Pas de la grille <select value={schedule.interval} onChange={(event) => schedule.changeInterval(event.target.value)}>
-        <option value={15}>Quart d’heure</option><option value={30}>Demi-heure</option><option value={60}>Heure</option>
-      </select></label>
+      <label htmlFor="campagne-lead-schedule-interval">
+        Pas de la grille
+        <Select
+          inputId="campagne-lead-schedule-interval"
+          className="campagneForm__select"
+          classNamePrefix="reactSelect"
+          options={INTERVAL_OPTIONS}
+          value={INTERVAL_OPTIONS.find((option) => option.value === schedule.interval)}
+          onChange={(option) => { if (option) schedule.setInterval(option.value); }}
+          isSearchable={false}
+          menuPosition="fixed"
+        />
+      </label>
       <p>Changer le pas conserve les heures déjà sélectionnées.</p>
       <div className="lead-schedule__scroll">
         <table className="lead-schedule__grid">

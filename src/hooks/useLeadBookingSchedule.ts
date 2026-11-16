@@ -15,13 +15,9 @@ export function useLeadBookingSchedule(form: CampagneFormState, apply: (slots: W
     setIsOpen(true);
   };
   const close = (): void => setIsOpen(false);
-  const changeInterval = (value: string): void => {
-    const minutes = Number(value);
-    if (minutes === 15 || minutes === 30 || minutes === 60) setInterval(minutes);
-  };
   const toggleSlot = (day: LeadBookingWeekday, time: string): void => {
     setSlots((previous) => toggleLeadScheduleSlot(previous, day, time));
   };
   const confirm = (): void => { apply(slots, interval, allowManual); close(); };
-  return { isOpen, slots, interval, allowManual, setAllowManual, open, close, changeInterval, toggleSlot, confirm, rows: buildLeadScheduleRows(interval, slots) };
+  return { isOpen, slots, interval, allowManual, setAllowManual, open, close, setInterval, toggleSlot, confirm, rows: buildLeadScheduleRows(interval, slots) };
 }

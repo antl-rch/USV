@@ -31,7 +31,8 @@ test('la grille hebdomadaire conserve les heures hors du pas et enregistre les f
   await expect(monday).toHaveAttribute('aria-pressed', 'true');
   await monday.click();
   await expect(monday).toHaveAttribute('aria-pressed', 'false');
-  await dialog.getByLabel('Pas de la grille').selectOption('30');
+  await dialog.getByRole('combobox', { name: 'Pas de la grille' }).press('ArrowDown');
+  await dialog.getByRole('option', { name: 'Demi-heure', exact: true }).click();
   await expect(dialog.getByRole('button', { name: 'Lundi 11:15', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await dialog.getByRole('button', { name: 'Vendredi 18:00', exact: true }).click();
   await page.screenshot({ path: '/tmp/antl-lead-schedule.png' });
