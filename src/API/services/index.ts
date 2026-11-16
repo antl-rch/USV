@@ -406,3 +406,5 @@ export { getScriptSupport, saveScriptSupport } from './scriptSupport.service.ts'
 export { getMonthlyCommercialsService, getMonthlyCommercialStatsService, addMonthlyPrimeAdjustmentService } from './monthlyCommercial.service.ts';
 
 export { getTransferOptions, getTransferCounts, previewTransfer, executeTransfer, getTransferHistory } from './ProspectTransfer.service.ts';
+
+export { scriptDocumentService } from './scriptDocument.service.ts';

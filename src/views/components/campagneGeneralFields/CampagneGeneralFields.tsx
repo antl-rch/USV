@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { IoCloudUpload, IoTrash } from 'react-icons/io5';
+import Select from 'react-select';
 
 import type { CampagneFormViewModel } from '../../../hooks/index.ts';
 import { CAMPAIGN_VARIANT_OPTIONS, LEAD_BOOKING_WEEKDAY_OPTIONS, getCampagneLogoUrl } from '../../../utils/scripts/index.ts';
@@ -16,6 +17,7 @@ export function CampagneGeneralFields({ viewModel }: CampagneGeneralFieldsProps)
     isLeadCampaign,
     isCreantlCampaign,
     handleChange,
+    handleVariantChange,
     handleDeleteLogo,
     handleLeadBookingWeekdayChange,
     leadSchedule,
@@ -25,10 +27,18 @@ export function CampagneGeneralFields({ viewModel }: CampagneGeneralFieldsProps)
     <>
       <div className="campagneForm__row">
         <label>Nom de la campagne *<input name="nom_campagne" value={form.nom_campagne} onChange={handleChange} required placeholder="Ex : Campagne fenêtres PVC 2026" /></label>
-        <label>Variante du script *
-          <select name="type_campagne" value={form.type_campagne} onChange={handleChange} required>
-            {CAMPAIGN_VARIANT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+        <label htmlFor="campagne-variant">Variante du script *
+          <Select
+            inputId="campagne-variant"
+            name="type_campagne"
+            className="campagneForm__select"
+            classNamePrefix="reactSelect"
+            options={CAMPAIGN_VARIANT_OPTIONS}
+            value={CAMPAIGN_VARIANT_OPTIONS.find((option) => option.value === form.type_campagne)}
+            onChange={(option) => { if (option) handleVariantChange(option.value); }}
+            isSearchable={false}
+            required
+          />
           <span className="campagneForm__hint">Ce réglage pilote le rendu fonctionnel du script vendeur pour cette campagne.</span>
         </label>
       </div>

@@ -1296,3 +1296,7 @@ Toute création d'un menu ou sous-menu impose l'ajout du droit correspondant dan
 - Les appels, notes, ventes, primes, leads clients et rendez-vous terminés conservent leurs auteurs. Seuls les propriétaires courants et rendez-vous vivants sont transférés, avec leurs alertes non lues.
 - Le journal conserve le précédent commercial et les snapshots. « Préparer la restitution » inverse les commerciaux et limite la sélection aux fiches du lot encore détenues par le destinataire. Un ancien salarié doit être réactivé avant de recevoir un portefeuille.
 - Le parcours navigateur est couvert par `tests/browser/prospect-transfer.spec.ts`.
+
+### Documents envoyés depuis Script
+
+- La fiche `/campagnes/:id` affiche `CampagneScriptDocuments` pour les campagnes enregistrées. `useScriptDocuments` orchestre le chargement, la sauvegarde de l’expéditeur et la gestion de plusieurs boutons. Le mot de passe est uniquement saisi pour le définir ou le remplacer. Le PDF est facultatif lors d'une modification.

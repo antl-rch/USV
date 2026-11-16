@@ -273,3 +273,5 @@ export { ProspectTransferReview } from './prospectTransferReview/index.ts';
 export { DevisFlexibleServices } from './devisFlexibleServices/index.ts';
 
 export { DevisSectionHeading } from './devisSectionHeading/index.ts';
+
+export { CampagneScriptDocuments } from './campagneScriptDocuments/index.ts';

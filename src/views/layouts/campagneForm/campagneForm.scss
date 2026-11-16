@@ -13,8 +13,6 @@
   display: flex;
   flex-direction: column;
   gap: 1.5em;
-
-  // Mobile : agents en premier
 }
 @media (max-width: vars.$desktopWidth - 1px) {
   #campagneForm .campagneForm__layout {
@@ -28,17 +26,8 @@
     align-items: start;
   }
 }
-#campagneForm .campagneForm__form {
-  flex: 1;
+#campagneForm .campagneForm__column {
   min-width: 0;
-  // Le formulaire prend l'espace restant
-
-  // En desktop, le formulaire est à gauche
-}
-@media (min-width: vars.$desktopWidth) {
-  #campagneForm .campagneForm__form {
-    order: 1;
-  }
 }
 #campagneForm .campagneForm__sidebar {
   min-width: 0;
@@ -46,15 +35,14 @@
   display: flex;
   flex-direction: column;
   gap: 1em;
-
-  // Sticky seulement en desktop
 }
-@media (min-width: vars.$desktopWidth) {
+@media (min-width: vars.$desktopWidth) and (min-height: 36rem) {
   #campagneForm .campagneForm__sidebar {
     position: sticky;
     top: 11dvh;
-
-    order: 2;
+    max-height: calc(89dvh - 1em);
+    overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 }
 #campagneForm .campagneForm__sidebar-actions {
@@ -99,6 +87,7 @@
   border: 1px solid vars.$borderColor;
   padding: 1.5em;
   margin-bottom: 1.5em;
+  min-width: 0;
 }
 #campagneForm .campagneForm__form fieldset legend {
   font-weight: 600;
@@ -124,13 +113,35 @@
   font-weight: 500;
   color: vars.$fontColorSecondary;
 }
-#campagneForm label input,
-#campagneForm label textarea,
-#campagneForm label select {
-  @include mixins.formInput(
-    "#campagneForm label input, #campagneForm label textarea, #campagneForm label select"
-  );
+#campagneForm label > input,
+#campagneForm label > textarea {
+  @include mixins.formInput("#campagneForm label > input, #campagneForm label > textarea");
   font-family: inherit;
+}
+#campagneForm label > input:not([type="checkbox"], [type="radio"]),
+#campagneForm .campagneForm__select .reactSelect__control {
+  box-sizing: border-box;
+  min-height: calc(2.75em + 4px);
+  font-size: 0.95em;
+  line-height: 1.25;
+}
+#campagneForm .campagneForm__select {
+  min-width: 0;
+}
+#campagneForm .campagneForm__select .reactSelect__control {
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: none;
+}
+#campagneForm .campagneForm__select .reactSelect__control--is-focused {
+  border-color: vars.$utilsPrimary;
+  box-shadow: 0 0 0 3px rgba(38, 208, 206, 0.1);
+}
+#campagneForm .campagneForm__select .reactSelect__value-container {
+  padding: 0 1em;
+}
+#campagneForm .campagneForm__select .reactSelect__control--is-disabled {
+  background: vars.$greyBackground;
 }
 #campagneForm .campagneForm__label-full {
   display: flex;
@@ -187,6 +198,7 @@
   border: 1px solid vars.$borderColor;
   padding: 1.5em;
 }
+#campagneForm .campagneForm__documents h2,
 #campagneForm .campagneForm__agents h2 {
   margin: 0 0 1em;
   font-size: 1.05rem;
@@ -649,4 +661,14 @@
   min-width: 0;
 }
 
-.campagneForm__supports { display: grid; gap: .6rem; margin-bottom: 1.25rem; }
+#campagneForm .campagneForm__documents input[type="file"] {
+  min-width: 0;
+  max-width: 100%;
+}
+#campagneForm .campagneForm__documents .campagneForm__hint {
+  overflow-wrap: anywhere;
+}
+.campagneForm__supports {
+  display: grid;
+  gap: 0.6rem;
+}

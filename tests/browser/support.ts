@@ -189,6 +189,14 @@ export async function installApiRoute(
     const request = describeApiRequest(route);
     if (await handler(route, request)) return;
 
+    if (request.method === 'GET' && /^\/campagnes\/\d+\/documents-script$/.test(request.path)) {
+      await fulfillJson(route, apiSuccess({
+        mailbox: { sender_name: '', sender_email: '', has_password: false },
+        documents: [],
+      }));
+      return;
+    }
+
     const requestKey = `${request.method} ${request.path}${request.search}`;
     unhandledRequests.push(requestKey);
     await fulfillJson(route, { success: false, message: `Unhandled API request: ${requestKey}` }, 500);

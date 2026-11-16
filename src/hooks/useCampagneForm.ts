@@ -26,7 +26,7 @@ import {
   MMA_LEAD_PRICING_CAMPAIGN_ID,
   normalizeCampaignVariant,
 } from '../utils/scripts/index.ts';
-import type { CampagneFormState } from '../utils/scripts/index.ts';
+import type { CampagneFormState, CampaignVariant } from '../utils/scripts/index.ts';
 
 export function useCampagneForm() {
   const navigate = useNavigate();
@@ -82,7 +82,7 @@ export function useCampagneForm() {
     load();
   }, [id, isEdit]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type, checked } = e.target as HTMLInputElement;
 
     if (type === 'checkbox') {
@@ -90,6 +90,10 @@ export function useCampagneForm() {
     } else {
       setForm(prev => ({ ...prev, [name]: value }));
     }
+  };
+
+  const handleVariantChange = (variant: CampaignVariant) => {
+    setForm((previous) => ({ ...previous, type_campagne: variant }));
   };
 
   // Gestion du select multiple pour modes_paiement
@@ -253,6 +257,7 @@ export function useCampagneForm() {
     usesEmployeeCountLeadPricing,
     isCreantlCampaign: campagneId === 15,
     handleChange,
+    handleVariantChange,
     handleModesPaiementChange,
     handleLeadBookingWeekdayChange,
     paymentOptions: CAMPAGNE_PAYMENT_OPTIONS,
