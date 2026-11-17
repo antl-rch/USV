@@ -83,11 +83,18 @@ export default function CampagneScriptDocuments({ campaignId }: { campaignId: nu
                 <input value={draft.subject} required maxLength={180}
                   onChange={(event) => vm.setDraft({ ...draft, subject: event.target.value })} />
               </label>
-              <label className="campagneForm__label-full">
-                Texte du mail
-                <textarea value={draft.message} required maxLength={8000} rows={5}
-                  onChange={(event) => vm.setDraft({ ...draft, message: event.target.value })} />
-              </label>
+              <div className="campagneForm__label-full">
+                <label>
+                  Texte du mail
+                  <textarea value={draft.message} required maxLength={8000} rows={5}
+                    aria-describedby="campagne-script-document-variables"
+                    onChange={(event) => vm.setDraft({ ...draft, message: event.target.value })} />
+                </label>
+                <p id="campagne-script-document-variables" className="campagneForm__hint">
+                  <code>{'{{agent}}'}</code> insère le prénom et le nom du commercial.
+                  {' '}<code>{'{{date}}'}</code> insère la date de l’envoi en heure de Paris (date de l’échange pour la plaquette Créantl).
+                </p>
+              </div>
               <label className="campagneForm__label-full">
                 {draft.id ? 'Remplacer le PDF' : 'Fichier PDF'}
                 <input key={vm.fileInputVersion} type="file" accept=".pdf,application/pdf" required={!draft.id}
