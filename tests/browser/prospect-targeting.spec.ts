@@ -53,6 +53,73 @@ const fields = [
     operators: ["in", "not_in"],
   },
 ];
+test("Hôtel se sélectionne dans Activités pour l’aperçu d’injection", async ({ page }) => {
+  let submitted: unknown;
+  await installApiRoute(page, async (route, request) => {
+    if (request.path === "/campagnes/7") {
+      await fulfillJson(route, apiSuccess(SALES_CAMPAIGN));
+      return true;
+    }
+    if (request.path.endsWith("/targeting/catalog")) {
+      await fulfillJson(route, apiSuccess({
+        fields: [...fields, {
+          field: "activite",
+          label: "Activités",
+          group: "Entreprise",
+          type: "list",
+          lookup: true,
+          operators: ["in", "not_in", "exists", "missing"],
+        }],
+        categories: [],
+      }));
+      return true;
+    }
+    if (request.path.includes("/targeting/options/activite")) {
+      await fulfillJson(route, apiSuccess([{ value: "@activity/hotels", label: "Hôtel" }]));
+      return true;
+    }
+    if (request.path.endsWith("/targeting/saved") || request.path.endsWith("/targeting/operations")) {
+      await fulfillJson(route, apiSuccess([]));
+      return true;
+    }
+    if (request.path.endsWith("/targeting/jobs/preview")) {
+      submitted = route.request().postDataJSON();
+      await fulfillJson(route, apiSuccess({
+        id: "11111111-1111-4111-8111-111111111111",
+        action: "inject",
+        summary: {
+          matched: 1, eligible: 1, selected: 1, limit: 100,
+          already_present: 0, blocked: 0, duplicates: 0, reminders: 0,
+        },
+        rows: [{
+          id_prospect: 42,
+          snapshot: {
+            raison_sociale: "Grand Hôtel Test",
+            activite: "Hôtels avec restaurant",
+            workforce: { min: null, max: null, known: false, origine: "import" },
+          },
+        }],
+      }));
+      return true;
+    }
+    return false;
+  });
+  await page.goto("/operations/prospect/7/inject");
+  await page.getByRole("button", { name: "Choisir une activité" }).click();
+  const values = page.getByRole("combobox", { name: "Valeurs 0-0", exact: true });
+  await values.fill("hotel");
+  await page.getByRole("option", { name: "Hôtel", exact: true }).click();
+  await values.press("Escape");
+  await expect(page.getByText("Activités : Hôtel.", { exact: true }).first()).toBeVisible();
+  await page.getByLabel("Nombre maximum de fiches").fill("100");
+  await page.getByRole("button", { name: "Voir les fiches correspondantes" }).click();
+  await expect(page.getByRole("row", { name: /Grand Hôtel Test/ })).toBeVisible();
+  expect(submitted).toMatchObject({
+    action: "inject",
+    criteria: { logic: "and", rules: [{ field: "activite", operator: "in", value: ["@activity/hotels"] }] },
+  });
+});
+
 test("ciblage multi-départements, inconnus, invalidation de l’analyse et retrait avec rappels", async ({
   page,
 }) => {
