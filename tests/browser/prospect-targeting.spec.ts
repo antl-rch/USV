@@ -120,6 +120,48 @@ test("Hôtel se sélectionne dans Activités pour l’aperçu d’injection", as
   });
 });
 
+test("un ciblage enregistré restitue le libellé NAF même hors des options initiales", async ({ page }) => {
+  const id = "@activity/naf-4511z";
+  const label = "Commerce de voitures et de véhicules automobiles légers · NAF 45.11Z";
+  const searches: string[] = [];
+  await installApiRoute(page, async (route, request) => {
+    if (request.path === "/campagnes/7") {
+      await fulfillJson(route, apiSuccess(SALES_CAMPAIGN));
+      return true;
+    }
+    if (request.path.endsWith("/targeting/catalog")) {
+      await fulfillJson(route, apiSuccess({
+        fields: [{ field: "activite", label: "Activités", group: "Entreprise", type: "list", lookup: true, operators: ["in", "not_in"] }],
+        categories: [],
+      }));
+      return true;
+    }
+    if (request.path.endsWith("/targeting/saved")) {
+      await fulfillJson(route, apiSuccess([{
+        id: "11111111-1111-4111-8111-111111111111",
+        nom: "Commerce automobile", active: true, exclusion: false,
+        criteria: { logic: "and", rules: [{ field: "activite", operator: "in", value: [id] }] },
+      }]));
+      return true;
+    }
+    if (request.path.endsWith("/targeting/operations")) {
+      await fulfillJson(route, apiSuccess([]));
+      return true;
+    }
+    if (request.path.endsWith("/targeting/options/activite")) {
+      const search = new URL(route.request().url()).searchParams.get("search") || "";
+      searches.push(search);
+      await fulfillJson(route, apiSuccess(search === id ? [{ value: id, label }] : []));
+      return true;
+    }
+    return false;
+  });
+  await page.goto("/operations/prospect/7/inject");
+  await page.getByRole("button", { name: "Charger les critères" }).click();
+  await expect(page.getByText(`Activités : ${label}.`, { exact: true }).first()).toBeVisible();
+  expect(searches.filter((term) => term === id)).toHaveLength(1);
+});
+
 test("ciblage multi-départements, inconnus, invalidation de l’analyse et retrait avec rappels", async ({
   page,
 }) => {

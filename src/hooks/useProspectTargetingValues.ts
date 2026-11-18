@@ -4,6 +4,7 @@ import { createTargetingOptionsLoader } from "../utils/scripts/index.ts";
 import type { TargetingChoice } from "../utils/types/index.ts";
 export function useProspectTargetingValues(campaign: number | null) {
   const loader = useRef(createTargetingOptionsLoader(getTargetingOptions));
+  const resolvedActivities = useRef(new Set<string>());
   const [choices, setChoices] = useState<Record<string, TargetingChoice[]>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const load = useCallback(
@@ -11,6 +12,9 @@ export function useProspectTargetingValues(campaign: number | null) {
       if (!campaign) return [];
       try {
         const values = await loader.current(campaign, field, search);
+        if (field === "activite") {
+          values.forEach(({ value }) => resolvedActivities.current.add(value));
+        }
         setChoices((previous) => ({
           ...previous,
           [field]: [
@@ -39,5 +43,14 @@ export function useProspectTargetingValues(campaign: number | null) {
     },
     [campaign],
   );
-  return { load, errors, choices };
+  const resolveActivityLabels = useCallback(
+    async (ids: Set<string>, signal: AbortSignal): Promise<void> => {
+      for (const id of ids) {
+        if (signal.aborted) return;
+        if (!resolvedActivities.current.has(id)) await load("activite", id);
+      }
+    },
+    [load],
+  );
+  return { load, errors, choices, resolveActivityLabels };
 }

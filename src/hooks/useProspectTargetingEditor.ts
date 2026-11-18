@@ -7,6 +7,7 @@ import type {
   TargetingCatalog,
   TargetingCriterion,
   TargetingGroup,
+  TargetingNode,
 } from "../utils/types/index.ts";
 import {
   decodeGuidedTargeting,
@@ -29,6 +30,21 @@ export function useProspectTargetingEditor(
 ) {
   const { showConfirm } = useAlert();
   const values = useProspectTargetingValues(campaign);
+  const resolveActivityLabels = values.resolveActivityLabels;
+  useEffect(() => {
+    const ids = new Set<string>();
+    const collect = (node: TargetingNode): void => {
+      if ("rules" in node) {
+        node.rules.forEach(collect);
+      } else if (node.field === "activite" && Array.isArray(node.value)) {
+        node.value.filter((value) => value.startsWith("@activity/")).forEach((value) => ids.add(value));
+      }
+    };
+    collect(criteria);
+    const controller = new AbortController();
+    void resolveActivityLabels(ids, controller.signal);
+    return () => controller.abort();
+  }, [criteria, resolveActivityLabels]);
   const [selection, setSelection] = useState<GuidedTargetingSelection | null>(
     () => decodeGuidedTargeting(criteria),
   );
