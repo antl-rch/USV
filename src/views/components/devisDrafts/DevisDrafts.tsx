@@ -16,7 +16,7 @@ export function DevisDrafts({ viewModel: vm }: { viewModel: QuoteDraftsViewModel
           <span className="devisView__drafts-icon"><MdFolderOpen /></span>
           <div>
             <h2>{vm.mode === 'browse' ? 'Devis à reprendre' : 'Rédaction du devis'}</h2>
-            <p>{vm.mode === 'browse' ? 'Choisissez un devis à reprendre ou créez une nouvelle proposition.' : 'Nommez votre devis, puis complétez la proposition ci-dessous.'}</p>
+            <p>{vm.mode === 'browse' ? 'Choisissez un devis partagé à reprendre ou créez une nouvelle proposition.' : 'Nommez votre devis, puis complétez la proposition ci-dessous.'}</p>
           </div>
         </div>
         {vm.mode === 'browse' ? (
@@ -57,8 +57,8 @@ export function DevisDrafts({ viewModel: vm }: { viewModel: QuoteDraftsViewModel
             )}
           />
           <p className="devisView__drafts-caption">
-            {vm.selectedDraft ? <>Dernière modification : {vm.selectedDraft.dateLabel}{vm.selectedDraft.localOnly ? ' · Copie locale à synchroniser' : ''}</>
-              : 'Vos devis apparaîtront ici dès les premières informations saisies.'}
+            {vm.selectedDraft ? <>Dernière modification : {vm.selectedDraft.dateLabel}{vm.selectedDraft.author_name ? ` · Créé par ${vm.selectedDraft.author_name}` : ''}{vm.selectedDraft.localOnly ? ' · Copie locale à synchroniser' : ''}</>
+              : 'Les devis partagés apparaîtront ici dès les premières informations saisies.'}
           </p>
         </div>
         <Button style="gradient" className="devisView__drafts-resume" disabled={vm.isSaving || vm.isLoading || !vm.selectedDraft} onClick={vm.resumeSelectedDraft}>
