@@ -271,7 +271,7 @@ export function useProspectTargetingEditor(
         }))
         .filter((section) => section.rows.length),
       sentence: rules
-        .map((rule) => describeTargetingChoice(rule, catalog))
+        .map((rule) => describeTargetingChoice(rule, catalog, values.choices[rule.field]))
         .join(" ; "),
       add: (field: string) => add(index, field),
       remove: () => {
@@ -292,7 +292,7 @@ export function useProspectTargetingEditor(
     exclusionFields,
     editable: selection !== null,
     summary: selection
-      ? describeGuidedTargeting(selection, catalog)
+      ? describeGuidedTargeting(selection, catalog, values.choices)
       : "Cette sélection enregistrée conserve ses critères et ses exclusions.",
     hasIncomplete: selection
       ? [...selection.profiles.flat(), ...selection.exclusions].some((rule) =>

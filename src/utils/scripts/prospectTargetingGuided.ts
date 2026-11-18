@@ -210,6 +210,7 @@ export function guidedTargetingOperators(
 export function describeTargetingChoice(
   rule: TargetingCriterion,
   catalog: TargetingCatalog,
+  lookupChoices: readonly TargetingChoice[] = [],
 ): string {
   const label =
     catalog.fields.find((field) => field.field === rule.field)?.label ??
@@ -228,7 +229,9 @@ export function describeTargetingChoice(
   }
   if (typeof value === "object" && value && "postcode" in value)
     return `${rule.operator === "not_in" ? "hors" : "dans"} un rayon de ${value.km} km autour de ${value.postcode || "…"}`;
-  const choices = targetingValueChoices(rule.field, catalog);
+  const choices = lookupChoices.length
+    ? lookupChoices
+    : targetingValueChoices(rule.field, catalog);
   const display = (raw: unknown): string =>
     choices.find((choice) => choice.value === String(raw))?.label ??
     String(raw ?? "…");
@@ -245,12 +248,15 @@ export function describeTargetingChoice(
 export function describeGuidedTargeting(
   selection: GuidedTargetingSelection,
   catalog: TargetingCatalog,
+  lookupChoices: Record<string, TargetingChoice[]> = {},
 ): string {
+  const describe = (rule: TargetingCriterion): string =>
+    describeTargetingChoice(rule, catalog, lookupChoices[rule.field]);
   const profiles = selection.profiles.filter((profile) => profile.length);
   const sentences = profiles.length
     ? profiles.map(
         (profile, index) =>
-          `${profiles.length > 1 ? `Sélection ${index + 1} : ` : ""}${profile.map((rule) => describeTargetingChoice(rule, catalog)).join(" ; ")}.`,
+          `${profiles.length > 1 ? `Sélection ${index + 1} : ` : ""}${profile.map(describe).join(" ; ")}.`,
       )
     : ["Aucun filtre : toutes les fiches du périmètre peuvent être retenues."];
   if (profiles.length > 1)
@@ -259,7 +265,7 @@ export function describeGuidedTargeting(
     );
   if (selection.exclusions.length)
     sentences.push(
-      `Dans tous les cas, écarter ${selection.exclusions.map((rule) => describeTargetingChoice(rule, catalog).replace(" à écarter", "")).join(" ; ")}.`,
+      `Dans tous les cas, écarter ${selection.exclusions.map((rule) => describe(rule).replace(" à écarter", "")).join(" ; ")}.`,
     );
   return sentences.join(" ");
 }
