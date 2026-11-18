@@ -31,6 +31,8 @@ export interface QuoteDraftSnapshot {
 }
 export interface QuoteDraftSummary {
   id: string;
+  id_employe?: number;
+  author_name?: string | null;
   title: string;
   revision: number;
   created_at: string;

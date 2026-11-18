@@ -11,7 +11,7 @@ async function installDraftApi(page: Page, options: { offline?: boolean; conflic
   await installApiRoute(page, async (route, request) => {
     if (request.path === '/devis/brouillons' && request.method === 'GET') {
       if (options.offline) { await fulfillJson(route, { success: false, message: 'Serveur indisponible' }, 503); return true; }
-      await fulfillJson(route, apiSuccess([...drafts.values()].map(({ id, title, revision, created_at, updated_at }) => ({ id, title, revision, created_at, updated_at })))); return true;
+      await fulfillJson(route, apiSuccess([...drafts.values()].map(({ id, id_employe, author_name, title, revision, created_at, updated_at }) => ({ id, id_employe, author_name, title, revision, created_at, updated_at })))); return true;
     }
     if (request.path.startsWith('/devis/brouillons/')) {
       const id = request.path.split('/').at(-1)!;
@@ -22,7 +22,8 @@ async function installDraftApi(page: Page, options: { offline?: boolean; conflic
         if (options.delay) await new Promise(resolve => setTimeout(resolve, options.delay));
         if (options.conflict && payload.revision > 0) { await fulfillJson(route, { success: false, message: 'Modifié dans une autre fenêtre' }, 409); return true; }
         const now = new Date().toISOString();
-        const draft = { id, title: payload.snapshot.draftName?.trim() || payload.snapshot.formState.companyName || 'Devis sans nom', revision: payload.revision + 1, snapshot: payload.snapshot, created_at: drafts.get(id)?.created_at || now, updated_at: now };
+        const existing = drafts.get(id);
+        const draft = { id, id_employe: existing?.id_employe ?? ADMIN_USER.id_employe, author_name: existing?.author_name ?? `${ADMIN_USER.prenom} ${ADMIN_USER.nom}`, title: payload.snapshot.draftName?.trim() || payload.snapshot.formState.companyName || 'Devis sans nom', revision: payload.revision + 1, snapshot: payload.snapshot, created_at: existing?.created_at || now, updated_at: now };
         drafts.set(id, draft); await fulfillJson(route, apiSuccess(draft)); return true;
       }
       if (request.method === 'GET') { await fulfillJson(route, apiSuccess(drafts.get(id))); return true; }
@@ -601,4 +602,23 @@ test('plusieurs blocs de prestations indépendants se sauvegardent et composent 
   await page.getByRole('button', { name: 'Changer de devis', exact: true }).click();
   await page.getByRole('button', { name: 'Nouveau devis', exact: true }).click();
   await expect(page.locator('.devisView__service-block')).toHaveCount(0);
+});
+
+test('un devis partagé créé par un collègue affiche son auteur et peut être repris puis modifié', async ({ page }) => {
+  const api = await installDraftApi(page);
+  const shared = {
+    ...quoteDraftFixture({ ...completeQuoteSnapshot(), draftName: 'Club de Basketball de Rochefort' }),
+    id: 'fc1baa1f-d377-44f7-b54c-6d0f90fe9d63',
+    id_employe: 1,
+    author_name: 'Nicolas DECRESSAC',
+    title: 'Club de Basketball de Rochefort',
+  };
+  api.drafts.set(shared.id, shared);
+  await page.goto('/commercial/devis');
+  await expect(page.locator('.devisView__drafts-caption')).toContainText('Créé par Nicolas DECRESSAC');
+  await page.getByRole('button', { name: 'Reprendre le devis', exact: true }).click();
+  await expect(page.getByLabel('Nom du devis')).toHaveValue('Club de Basketball de Rochefort');
+  await page.getByLabel('Besoin exprimé').fill('Modification partagée par la direction');
+  await expect.poll(() => api.drafts.get(shared.id)?.snapshot.formState.needSummary).toBe('Modification partagée par la direction');
+  expect(api.drafts.get(shared.id)?.author_name).toBe('Nicolas DECRESSAC');
 });

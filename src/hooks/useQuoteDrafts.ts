@@ -99,7 +99,7 @@ export function useQuoteDrafts(rawSnapshot: QuoteDraftSnapshot, restore: (snapsh
     activeId.current = id; setCurrentId(id);
     const previous = local.current.get(id);
     const now = new Date().toISOString();
-    persist({ id, revision: previous?.revision || 0, created_at: previous?.created_at || now, updated_at: now,
+    persist({ id, id_employe: previous?.id_employe ?? owner, author_name: previous?.author_name ?? null, revision: previous?.revision || 0, created_at: previous?.created_at || now, updated_at: now,
       title: snapshot.draftName.trim() || snapshot.formState.companyName.trim() || snapshot.formState.contactName.trim() || 'Devis sans nom', snapshot, dirty: true });
     setStatus('Modifications en attente de sauvegarde sur le serveur…');
     clearTimeout(timer.current);
@@ -170,7 +170,15 @@ export function useQuoteDrafts(rawSnapshot: QuoteDraftSnapshot, restore: (snapsh
   const drafts = useMemo(() => {
     const merged = new Map(rows.map(row => [row.id, { ...row, localOnly: false }]));
     localRows.forEach(draft => {
-      if (draft.dirty || !merged.has(draft.id)) merged.set(draft.id, { ...draft, localOnly: draft.dirty });
+      const serverRow = merged.get(draft.id);
+      if (draft.dirty || !serverRow) {
+        merged.set(draft.id, {
+          ...draft,
+          id_employe: draft.id_employe ?? serverRow?.id_employe,
+          author_name: draft.author_name ?? serverRow?.author_name ?? null,
+          localOnly: draft.dirty,
+        });
+      }
     });
     return [...merged.values()].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).map(draft => ({
       ...draft, dateLabel: new Date(draft.updated_at).toLocaleString('fr-FR'), current: draft.id === currentId,
@@ -180,7 +188,8 @@ export function useQuoteDrafts(rawSnapshot: QuoteDraftSnapshot, restore: (snapsh
     || drafts.find(draft => draft.current) || drafts[0] || null;
   const currentDraft = drafts.find(draft => draft.current);
   const draftOptions = drafts.map(draft => ({
-    value: draft.id, label: draft.title, detail: draft.dateLabel,
+    value: draft.id, label: draft.title,
+    detail: draft.author_name ? `${draft.dateLabel} · ${draft.author_name}` : draft.dateLabel,
     storageLabel: draft.localOnly ? 'Copie locale' : 'Sauvegardé',
   }));
   const hasWarning = Boolean(error || localError || conflict.current);
