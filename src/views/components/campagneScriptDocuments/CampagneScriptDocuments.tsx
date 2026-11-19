@@ -95,6 +95,50 @@ export default function CampagneScriptDocuments({ campaignId }: { campaignId: nu
                   {' '}<code>{'{{date}}'}</code> insère la date de l’envoi en heure de Paris (date de l’échange pour la plaquette Créantl).
                 </p>
               </div>
+              <div className="campagneForm__signature-builder">
+                <p className="campagneForm__signature-title">Carte de signature (optionnelle)</p>
+                <label className="campagneForm__label-full">
+                  Texte de la signature
+                  <textarea value={draft.signature_text ?? ''} maxLength={2000} rows={3}
+                    placeholder="Ex : {{agent}} · Service commercial"
+                    onChange={(event) => vm.setDraft({ ...draft, signature_text: event.target.value })} />
+                </label>
+                <div className="campagneForm__row" role="radiogroup" aria-label="Disposition de la signature">
+                  <label className="campagneForm__weekday-option">
+                    <input type="radio" name="signature_layout" value="stacked"
+                      checked={(draft.signature_layout ?? 'stacked') === 'stacked'}
+                      onChange={() => vm.setDraft({ ...draft, signature_layout: 'stacked' })} />
+                    <span>Empilé (texte au-dessus, image en dessous)</span>
+                  </label>
+                  <label className="campagneForm__weekday-option">
+                    <input type="radio" name="signature_layout" value="side_by_side"
+                      checked={draft.signature_layout === 'side_by_side'}
+                      onChange={() => vm.setDraft({ ...draft, signature_layout: 'side_by_side' })} />
+                    <span>Côte à côte (image à gauche, texte à droite)</span>
+                  </label>
+                </div>
+                <label className="campagneForm__label-full">
+                  {draft.signature_image_filename && !draft.remove_signature_image ? 'Remplacer l’image de signature' : 'Image de signature'}
+                  <input key={`signature-${vm.fileInputVersion}`} type="file"
+                    accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+                    aria-describedby={draft.signature_image_filename ? 'campagne-script-document-signature-image' : undefined}
+                    onChange={(event) => vm.setSignatureImage(event.target.files?.[0] ?? null)} />
+                </label>
+                {draft.signature_image_filename && (
+                  <div className="campagneForm__signature-image-meta">
+                    <p id="campagne-script-document-signature-image" className="campagneForm__hint">
+                      {draft.remove_signature_image
+                        ? `Image retirée à l’enregistrement (${draft.signature_image_filename})`
+                        : `Image de signature : ${draft.signature_image_filename}`}
+                    </p>
+                    <label className="campagneForm__checkbox-label">
+                      <input type="checkbox" checked={Boolean(draft.remove_signature_image)}
+                        onChange={(event) => vm.setDraft({ ...draft, remove_signature_image: event.target.checked })} />
+                      <span>Retirer l’image de signature</span>
+                    </label>
+                  </div>
+                )}
+              </div>
               <label className="campagneForm__label-full">
                 {draft.id ? 'Remplacer le PDF' : 'Fichier PDF'}
                 <input key={vm.fileInputVersion} type="file" accept=".pdf,application/pdf" required={!draft.id}

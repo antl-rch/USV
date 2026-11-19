@@ -9,7 +9,15 @@ test('la fiche campagne enregistre un expéditeur et ajoute un second PDF rempla
     id: '19000000-0000-4000-8000-000000000001', label: 'Plaquette', position: 0,
     message: 'Bonjour', subject: 'Plaquette', enabled: true, attachment_filename: 'Maison Hemel.pdf', revision: 1,
   };
-  const catalog = { ...brochure, id: '19000000-0000-4000-8000-000000000002', label: 'Catalogue', attachment_filename: 'catalogue.pdf' };
+  const catalog = {
+    ...brochure,
+    id: '19000000-0000-4000-8000-000000000002',
+    label: 'Catalogue',
+    attachment_filename: 'catalogue.pdf',
+    signature_text: '{{agent}} · Maison Hemel',
+    signature_layout: 'side_by_side' as const,
+    signature_image_filename: 'signature-hemel.png',
+  };
   const unexpected: string[] = [];
 
   await installApiRoute(page, async (route, request) => {
@@ -27,6 +35,9 @@ test('la fiche campagne enregistre un expéditeur et ajoute un second PDF rempla
     }
     if (request.path === endpoint && request.method === 'POST') {
       expect(route.request().postData()).toContain('filename="catalogue.pdf"');
+      expect(route.request().postData()).toContain('filename="signature-hemel.png"');
+      expect(route.request().postData()).toMatch(/name="signature_layout"\r\n\r\nside_by_side/);
+      expect(route.request().postData()).toContain('{{agent}} · Maison Hemel');
       expect(route.request().postData()).toContain('Catalogue');
       await fulfillJson(route, apiSuccess(catalog), 201);
       return true;
@@ -35,7 +46,14 @@ test('la fiche campagne enregistre un expéditeur et ajoute un second PDF rempla
       expect(route.request().postData()).toContain('filename="nouveau.pdf"');
       expect(route.request().postData()).toMatch(/name="revision"\r\n\r\n1/);
       expect(route.request().postData()).toMatch(/name="enabled"\r\n\r\nfalse/);
-      await fulfillJson(route, apiSuccess({ ...catalog, attachment_filename: 'nouveau.pdf', enabled: false, revision: 2 }));
+      expect(route.request().postData()).toMatch(/name="remove_signature_image"\r\n\r\ntrue/);
+      await fulfillJson(route, apiSuccess({
+        ...catalog,
+        attachment_filename: 'nouveau.pdf',
+        signature_image_filename: null,
+        enabled: false,
+        revision: 2,
+      }));
       return true;
     }
     return false;
@@ -51,20 +69,30 @@ test('la fiche campagne enregistre un expéditeur et ajoute un second PDF rempla
   await section.getByLabel('Libellé dans Script').fill('Catalogue');
   await section.getByLabel('Objet du mail').fill('Votre catalogue');
   await section.getByLabel('Texte du mail').fill('Bonjour, voici votre catalogue.');
+  await section.getByLabel('Texte de la signature').fill('{{agent}} · Maison Hemel');
+  await section.getByLabel('Côte à côte (image à gauche, texte à droite)').check();
+  const signatureImage = {
+    mimeType: 'image/png',
+    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  };
+  await section.getByLabel('Image de signature').setInputFiles({ ...signatureImage, name: 'signature-hemel.png' });
   const file = { mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7') };
   await section.getByLabel('Fichier PDF').setInputFiles({ ...file, name: 'catalogue.pdf' });
   await section.getByLabel('Afficher le bouton dans Script').check();
   await section.getByRole('button', { name: 'Enregistrer le bouton' }).click();
   await expect(section.getByText('catalogue.pdf · Version 1')).toBeVisible();
+  await expect(section.getByText('Image de signature : signature-hemel.png')).toBeVisible();
   const selector = section.getByRole('combobox', { name: 'Document à modifier' });
   await selector.click();
   await expect(section.getByRole('option')).toHaveText(['Nouveau bouton', 'Plaquette · Visible', 'Catalogue · Visible']);
   await section.getByRole('option', { name: 'Catalogue · Visible', exact: true }).click();
 
   await section.getByLabel('Remplacer le PDF').setInputFiles({ ...file, name: 'nouveau.pdf' });
+  await section.getByLabel('Retirer l’image de signature').check();
   await section.getByLabel('Afficher le bouton dans Script').uncheck();
   await section.getByRole('button', { name: 'Enregistrer le bouton' }).click();
   await expect(section.getByText('nouveau.pdf · Version 2')).toBeVisible();
+  await expect(section.getByText('Image de signature : signature-hemel.png')).not.toBeVisible();
   await selector.click();
   await expect(section.getByRole('option')).toHaveText(['Nouveau bouton', 'Plaquette · Visible', 'Catalogue · Masqué']);
   await section.getByRole('option', { name: 'Plaquette · Visible', exact: true }).click();

@@ -4,7 +4,17 @@ import { isAxiosError } from 'axios';
 import { scriptDocumentService } from '../API/services/index.ts';
 import type { ScriptDocument, ScriptDocumentDraft, ScriptDocumentMailbox } from '../utils/types/index.ts';
 
-const EMPTY_DOCUMENT: ScriptDocumentDraft = { label: '', subject: '', message: '', position: 0, enabled: false };
+const EMPTY_DOCUMENT: ScriptDocumentDraft = {
+  label: '',
+  subject: '',
+  message: '',
+  position: 0,
+  enabled: false,
+  signature_text: '',
+  signature_layout: 'stacked',
+  signature_image_filename: null,
+  remove_signature_image: false,
+};
 const EMPTY_MAILBOX: ScriptDocumentMailbox = { sender_name: '', sender_email: '', has_password: false };
 const errorMessage = (error: unknown) => {
   if (isAxiosError<{ message?: string }>(error)) {
@@ -19,6 +29,7 @@ export function useScriptDocuments(campaignId: number) {
   const [documents, setDocuments] = useState<ScriptDocument[]>([]);
   const [draft, setDraft] = useState<ScriptDocumentDraft>(EMPTY_DOCUMENT);
   const [file, setFile] = useState<File | null>(null);
+  const [signatureImage, setSignatureImage] = useState<File | null>(null);
   const [fileInputVersion, setFileInputVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -36,6 +47,7 @@ export function useScriptDocuments(campaignId: number) {
       setDraft(EMPTY_DOCUMENT);
       setPassword('');
       setFile(null);
+      setSignatureImage(null);
       setFileInputVersion((value) => value + 1);
       setFeedback(null);
       setLoaded(true);
@@ -48,10 +60,24 @@ export function useScriptDocuments(campaignId: number) {
   }, [campaignId, reloadKey]);
 
   const edit = (document: ScriptDocumentDraft = EMPTY_DOCUMENT) => {
-    setDraft(document);
+    setDraft({
+      ...EMPTY_DOCUMENT,
+      ...document,
+      signature_text: document.signature_text ?? '',
+      signature_layout: document.signature_layout ?? 'stacked',
+      remove_signature_image: false,
+    });
     setFile(null);
+    setSignatureImage(null);
     setFileInputVersion((value) => value + 1);
     setFeedback(null);
+  };
+
+  const selectSignatureImage = (nextFile: File | null) => {
+    setSignatureImage(nextFile);
+    if (nextFile) {
+      setDraft((current) => ({ ...current, remove_signature_image: false }));
+    }
   };
 
   const saveMailbox = async (event: FormEvent) => {
@@ -78,7 +104,7 @@ export function useScriptDocuments(campaignId: number) {
     setSaving(true);
     setFeedback(null);
     try {
-      const saved = await scriptDocumentService.saveDocument(campaignId, draft, file);
+      const saved = await scriptDocumentService.saveDocument(campaignId, draft, file, signatureImage);
       setDocuments((current) => [...current.filter((item) => item.id !== saved.id), saved]
         .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id)));
       edit(saved);
@@ -96,6 +122,10 @@ export function useScriptDocuments(campaignId: number) {
   ];
   const selectDocument = (id: string) => edit(documents.find((document) => document.id === id));
 
-  return { mailbox, setMailbox, password, setPassword, documentOptions, selectDocument, draft, setDraft, fileInputVersion, setFile,
-    loading, loaded, saving, feedback, saveMailbox, saveDocument, reload: () => setReloadKey((value) => value + 1) };
+  return {
+    mailbox, setMailbox, password, setPassword, documentOptions, selectDocument,
+    draft, setDraft, fileInputVersion, setFile, setSignatureImage: selectSignatureImage,
+    loading, loaded, saving, feedback, saveMailbox, saveDocument,
+    reload: () => setReloadKey((value) => value + 1),
+  };
 }
