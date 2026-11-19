@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import Select from "react-select";
 import AsyncSelect from "react-select/async";
 import CreatableSelect from "react-select/creatable";
@@ -20,6 +20,7 @@ export function ProspectTargetingCriterion({
   fields,
   disabled,
 }: Props): ReactElement {
+  const [showRawActivities, setShowRawActivities] = useState(false);
   return (
     <div className="targetingChoice">
       <div className="targetingChoice__heading">
@@ -146,12 +147,12 @@ export function ProspectTargetingCriterion({
           {row.label}
           {row.lookup ? (
             <AsyncSelect<TargetingChoice, true>
-              key={row.selectedField?.value}
+              key={`${row.selectedField?.value}-${showRawActivities}`}
               inputId={`choice-values-${row.key}`}
               aria-label={`Valeurs ${row.key}`}
               isMulti
               defaultOptions
-              loadOptions={row.loadOptions}
+              loadOptions={row.selectedField?.value === 'activite' && showRawActivities ? row.loadRawActivities : row.loadOptions}
               value={row.selectedOptions}
               onChange={row.changeList}
               closeMenuOnSelect={false}
@@ -202,6 +203,15 @@ export function ProspectTargetingCriterion({
           {row.lookupError && <small role="alert">{row.lookupError}</small>}
           {row.hint && <small>{row.hint}</small>}
         </label>
+      )}
+      {row.selectedField?.value === 'activite' && row.needsList && (
+        <div>
+          <label className="targetingCheck">
+            <input type="checkbox" checked={showRawActivities} onChange={(event) => setShowRawActivities(event.target.checked)} />
+            Rechercher un libellé historique (mode avancé)
+          </label>
+          <small>Les fiches dont l’activité est imprécise peuvent nécessiter un code NAF ou un libellé historique.</small>
+        </div>
       )}
       {!row.noValue &&
         !row.needsList &&

@@ -120,6 +120,7 @@ export interface GuidedTargetingRow {
   lookup: boolean;
   lookupError: string;
   loadOptions: (search: string) => Promise<TargetingChoice[]>;
+  loadRawActivities: (search: string) => Promise<TargetingChoice[]>;
   key: string;
   label: string;
   type: string;

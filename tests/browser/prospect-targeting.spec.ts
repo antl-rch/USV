@@ -74,7 +74,11 @@ test("Hôtel se sélectionne dans Activités pour l’aperçu d’injection", as
       }));
       return true;
     }
-    if (request.path.includes("/targeting/options/activite")) {
+    if (request.path.endsWith("/targeting/options/activite_brute")) {
+      await fulfillJson(route, apiSuccess([{ value: "HOTEL HISTORIQUE", label: "Hôtel historique" }]));
+      return true;
+    }
+    if (request.path.endsWith("/targeting/options/activite")) {
       await fulfillJson(route, apiSuccess([{ value: "@activity/hotels", label: "Hôtel" }]));
       return true;
     }
@@ -111,12 +115,17 @@ test("Hôtel se sélectionne dans Activités pour l’aperçu d’injection", as
   await page.getByRole("option", { name: "Hôtel", exact: true }).click();
   await values.press("Escape");
   await expect(page.getByText("Activités : Hôtel.", { exact: true }).first()).toBeVisible();
+  await page.getByLabel("Rechercher un libellé historique (mode avancé)").check();
+  const rawValues = page.getByRole("combobox", { name: "Valeurs 0-0", exact: true });
+  await rawValues.fill("historique");
+  await page.getByRole("option", { name: "Hôtel historique", exact: true }).click();
+  await rawValues.press("Escape");
   await page.getByLabel("Nombre maximum de fiches").fill("100");
   await page.getByRole("button", { name: "Voir les fiches correspondantes" }).click();
   await expect(page.getByRole("row", { name: /Grand Hôtel Test/ })).toBeVisible();
   expect(submitted).toMatchObject({
     action: "inject",
-    criteria: { logic: "and", rules: [{ field: "activite", operator: "in", value: ["@activity/hotels"] }] },
+    criteria: { logic: "and", rules: [{ field: "activite", operator: "in", value: ["@activity/hotels", "HOTEL HISTORIQUE"] }] },
   });
 });
 

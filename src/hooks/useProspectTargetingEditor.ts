@@ -123,7 +123,7 @@ export function useProspectTargetingEditor(
       (field) => field.field === rule.field,
     );
     const options = definition?.lookup
-      ? (values.choices[rule.field] ?? [])
+      ? [...(values.choices[rule.field] ?? []), ...(rule.field === 'activite' ? values.choices.activite_brute ?? [] : [])]
       : targetingValueChoices(rule.field, catalog);
     const selected = Array.isArray(rule.value) ? rule.value : [];
     const operators = guidedTargetingOperators(rule, catalog, profile === null);
@@ -146,8 +146,9 @@ export function useProspectTargetingEditor(
         : "";
     return {
       lookup: definition?.lookup ?? false,
-      lookupError: values.errors[rule.field] ?? "",
+      lookupError: values.errors[rule.field] ?? (rule.field === 'activite' ? values.errors.activite_brute : undefined) ?? "",
       loadOptions: (search) => values.load(rule.field, search),
+      loadRawActivities: (search) => values.load('activite_brute', search),
       key: `${profile ?? "excluded"}-${index}`,
       label: definition?.label ?? "Choix à compléter",
       type: definition?.type ?? "text",
