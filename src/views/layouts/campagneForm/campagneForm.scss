@@ -668,6 +668,24 @@
 #campagneForm .campagneForm__documents .campagneForm__hint {
   overflow-wrap: anywhere;
 }
+#campagneForm .campagneForm__signature-builder {
+  padding: 1em;
+  margin-bottom: 1em;
+  background: #f8fafc;
+  border: 1px solid vars.$borderColor;
+  border-radius: 8px;
+}
+#campagneForm .campagneForm__signature-title {
+  margin: 0 0 0.75em;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: vars.$fontColorPrimary;
+}
+#campagneForm .campagneForm__signature-image-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
 .campagneForm__supports {
   display: grid;
   gap: 0.6rem;

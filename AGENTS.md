@@ -1300,3 +1300,4 @@ Toute création d'un menu ou sous-menu impose l'ajout du droit correspondant dan
 ### Documents envoyés depuis Script
 
 - La fiche `/campagnes/:id` affiche `CampagneScriptDocuments` pour les campagnes enregistrées. `useScriptDocuments` orchestre le chargement, la sauvegarde de l’expéditeur et la gestion de plusieurs boutons. Le mot de passe est uniquement saisi pour le définir ou le remplacer. Le PDF est facultatif lors d'une modification.
+- Chaque bouton peut définir une carte de signature optionnelle (`signature_text` supportant `{{agent}}` et `{{date}}`, `signature_layout` empilé ou côte à côte, et une image dédiée PNG/JPG/WebP embarquée en CID lors de l’envoi).

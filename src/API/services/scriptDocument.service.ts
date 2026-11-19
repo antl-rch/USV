@@ -16,15 +16,24 @@ export const scriptDocumentService = {
     const { data } = await axios.put<Response<ScriptDocumentMailbox>>(`${endpoint(campaignId)}/expediteur`, mailbox);
     return data.data;
   },
-  async saveDocument(campaignId: number, draft: ScriptDocumentDraft, file: File | null): Promise<ScriptDocument> {
+  async saveDocument(
+    campaignId: number,
+    draft: ScriptDocumentDraft,
+    file: File | null,
+    signatureImage: File | null = null,
+  ): Promise<ScriptDocument> {
     const form = new FormData();
     form.set('label', draft.label);
     form.set('subject', draft.subject);
     form.set('message', draft.message);
     form.set('position', String(draft.position));
     form.set('enabled', String(draft.enabled));
+    form.set('signature_text', draft.signature_text ?? '');
+    form.set('signature_layout', draft.signature_layout ?? 'stacked');
+    if (draft.remove_signature_image) form.set('remove_signature_image', 'true');
     if (draft.revision !== undefined) form.set('revision', String(draft.revision));
     if (file) form.set('file', file);
+    if (signatureImage) form.set('signature_image', signatureImage);
     const uri = draft.id ? `${endpoint(campaignId)}/${draft.id}` : endpoint(campaignId);
     const { data } = await postFormDataRequest<Response<ScriptDocument>>(uri, form);
     return data.data;
