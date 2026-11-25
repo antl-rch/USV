@@ -32,9 +32,16 @@ export interface LeadBillingSettings {
   usesEmployeeCountPricing: boolean;
 }
 
-export type BillingPreview =
+export interface BillingPreviewMetadata {
+  excluded_count?: number;
+  is_reissue?: boolean;
+  is_locked?: boolean;
+  billing_campaign?: Campagne;
+}
+
+export type BillingPreview = BillingPreviewMetadata & (
   | { source: 'ventes'; rows: Vente[]; stats: VenteStats }
-  | { source: 'leads'; rows: LeadClient[]; stats: LeadClientStats };
+  | { source: 'leads'; rows: LeadClient[]; stats: LeadClientStats });
 
 export interface BillingSummaryCard {
   label: string;
@@ -61,6 +68,9 @@ export interface BillingAmounts {
 export type ClientAccountBillingMode = 'validated' | 'manual';
 
 export interface CampaignInvoicePaStatus {
+  adjustments?: InvoiceAdjustment[];
+  base_total_ht?: number;
+  source_claimed?: boolean;
   account_mode?: ClientAccountBillingMode | null;
   account_quantity?: number | null;
   id_campaign_invoice: number | null;
@@ -83,4 +93,13 @@ export interface CampaignInvoicePaStatus {
   status: 'draft' | 'creating' | 'issued' | 'failed';
   last_error: string | null;
   is_test?: boolean;
+}
+
+export interface InvoiceAdjustment {
+  label: string;
+  comment: string;
+  direction: 'addition' | 'deduction';
+  unit: 'euro' | 'percent';
+  value: number;
+  vat: 'campaign' | 'none';
 }

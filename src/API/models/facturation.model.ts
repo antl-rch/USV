@@ -1,4 +1,5 @@
 import type {
+  InvoiceAdjustment,
   BillingAmounts,
   BillingPreview,
   CampaignBillingSettings,
@@ -209,4 +210,18 @@ export function buildResolvedBillingProfile(campagne: Campagne | null): Resolved
       .filter((field) => field.required && !isFilled(field.value === 'Non renseigné' ? '' : field.value))
       .map((field) => field.label),
   };
+}
+
+export function computeAdjustedInvoiceTotals(base: BillingAmounts, adjustments: InvoiceAdjustment[], vatRate: number) {
+  const lines = adjustments.map((row) => {
+    const totalHt = roundCurrency((row.unit === 'percent' ? base.totalHt * row.value / 100 : row.value) * (row.direction === 'deduction' ? -1 : 1));
+    return { totalHt, totalTva: roundCurrency(totalHt * (row.vat === 'none' ? 0 : vatRate)) };
+  });
+  const totalHt = roundCurrency(base.totalHt + lines.reduce((sum, line) => sum + line.totalHt, 0));
+  const taxableAdjustment = lines.reduce((sum, line, index) => sum + (adjustments[index].vat === 'none' ? 0 : line.totalHt), 0);
+  const totalTva = roundCurrency((base.totalHt + taxableAdjustment) * vatRate);
+  const error = adjustments.some((row) => !row.label.trim() || row.label.length > 200 || row.comment.length > 2000 || !Number.isFinite(row.value) || row.value <= 0 || row.value > 100000000)
+    ? 'Complétez chaque libellé et saisissez un montant strictement positif.'
+    : totalHt < 0 || totalHt + totalTva < 0 ? 'Les déductions ne peuvent pas rendre la facture négative.' : null;
+  return { totals: { ...base, totalHt, totalTtc: roundCurrency(totalHt + totalTva) }, lines, error };
 }

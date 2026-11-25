@@ -180,6 +180,11 @@ test('le détail lead et la facturation gardent leurs workflows navigateur', asy
       return true;
     }
 
+    if (request.method === 'GET' && request.path === `/campagnes/${SALES_CAMPAIGN.id_campagne}/facturation/preview`) {
+      await fulfillJson(route, apiSuccess({ source: 'ventes', rows: [sale], stats: { total: { count: 1, total_montant: 500 }, validees: { count: 1, total_montant: 500 }, enAttente: { count: 0, total_montant: 0 }, annulees: { count: 0, total_montant: 0 }, frigo: { count: 0, total_montant: 0 } }, is_reissue: false, excluded_count: 0 }));
+      return true;
+    }
+
     if (request.method === 'GET' && request.path === `/campagnes/${SALES_CAMPAIGN.id_campagne}/facturation/pa`) {
       await fulfillJson(route, apiSuccess(null));
       return true;
@@ -201,6 +206,18 @@ test('le détail lead et la facturation gardent leurs workflows navigateur', asy
   await expect(page.getByText('Configuration facture')).toBeVisible();
   await expect(page.getByText('Complète', { exact: true })).toBeVisible();
   await expect(page.getByText('Assiette ventes HT', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Ajouter un ajustement' }).click();
+  await expect(page.getByRole('button', { name: 'Envoyer la facture par email' })).toBeDisabled();
+  await page.getByLabel('Libellé 1', { exact: true }).fill('Pénalités de retard');
+  await page.getByLabel('Commentaire 1', { exact: true }).fill('Retard de paiement de la facture précédente.');
+  await page.getByLabel('Valeur 1', { exact: true }).fill('10');
+  await page.getByLabel('Unité 1', { exact: true }).selectOption('percent');
+  await page.getByLabel('TVA 1', { exact: true }).selectOption('none');
+  await page.getByRole('button', { name: 'Ajouter un ajustement' }).click();
+  await page.getByLabel('Libellé 2', { exact: true }).fill('Remise commerciale');
+  await page.getByLabel('Sens 2', { exact: true }).selectOption('deduction');
+  await page.getByLabel('Valeur 2', { exact: true }).fill('0.10');
+  await page.getByLabel('Ajustements de facture').screenshot({ path: '/tmp/billing-adjustments-ui.png' });
   await page.getByRole('button', { name: 'Envoyer la facture par email' }).click();
 
   const invoiceModal = page.locator('.facturationView__modal');
@@ -214,7 +231,10 @@ test('le détail lead et la facturation gardent leurs workflows navigateur', asy
   await confirmation.getByRole('button', { name: 'Envoyer', exact: true }).click();
 
   await expect.poll(() => invoiceEmailPayload).not.toBeNull();
-  expect(invoiceEmailPayload).toMatchObject({ recipient_email: 'facturation@client.fr' });
+  expect(invoiceEmailPayload).toMatchObject({ recipient_email: 'facturation@client.fr', adjustments: [
+    { label: 'Pénalités de retard', comment: 'Retard de paiement de la facture précédente.', direction: 'addition', unit: 'percent', value: 10, vat: 'none' },
+    { label: 'Remise commerciale', direction: 'deduction', unit: 'euro', value: .1, vat: 'campaign' },
+  ] });
   expect(invoiceEmailPayload?.date_debut).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   expect(invoiceEmailPayload?.date_fin).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   await expect(invoiceModal).toBeHidden();
@@ -439,6 +459,8 @@ test('une campagne compte client enregistre le prix unitaire et facture les doss
     } else if (request.path === '/campagnes/18/facturation/factur-x' && request.method === 'POST') {
       facturXRequest = route.request().postDataJSON();
       await route.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.4' });
+    } else if (request.path === '/campagnes/18/facturation/preview') {
+      await fulfillJson(route, apiSuccess({ source: 'ventes', rows: sales, stats: { total: { count: sales.length, total_montant: 0 }, validees: { count: sales.length, total_montant: 0 }, enAttente: { count: 0, total_montant: 0 }, annulees: { count: 0, total_montant: 0 }, frigo: { count: 0, total_montant: 0 } }, is_reissue: false, excluded_count: 0 }));
     } else if (request.path === '/campagnes/18/facturation/pa') {
       await fulfillJson(route, apiSuccess(null));
     } else return false;
@@ -479,4 +501,38 @@ test('une campagne compte client enregistre le prix unitaire et facture les doss
   await expect(page.getByText('Comptes clients à réaliser', { exact: true })).toBeVisible();
   await download.click();
   await expect.poll(() => facturXRequest).toMatchObject({ account_quantity: 5, account_mode: 'manual' });
+});
+
+
+test('en décembre une campagne arrêtée permet de ressortir novembre avec ses anciens détails', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-12-05T12:00:00Z'));
+  const currentCampaign = { ...MMA_CAMPAIGN, statut: 'terminee', bon_commande_config: { ...MMA_CAMPAIGN.bon_commande_config, lead_billing: { unit_price_ht: 999 } } };
+  const frozenCampaign = { ...MMA_CAMPAIGN, bon_commande_config: { ...MMA_CAMPAIGN.bon_commande_config, lead_billing: { unit_price_ht: 75 } } };
+  const oldLead = { ...lead, statut: 'effectue', date_rdv: '2026-08-15', date_effectue: '2026-11-25T14:00:00Z' };
+  const stats = { total: 1, effectues: 1, planifies: 0, annules: 0, reportes: 0, nonHonores: 0 };
+  const adjustments = [{ label: 'Pénalité novembre', comment: 'Commentaire original', direction: 'addition', unit: 'euro', value: 40, vat: 'none' }];
+  let downloaded: unknown = null;
+  const unhandled: string[] = [];
+  await installApiRoute(page, async (route, request) => {
+    const url = new URL(route.request().url());
+    const november = url.searchParams.get('date_debut') === '2026-11-01';
+    if (request.path === '/campagnes') await fulfillJson(route, apiSuccess([currentCampaign]));
+    else if (request.path === '/campagnes/8/facturation/preview') await fulfillJson(route, apiSuccess(november ? { source: 'leads', rows: [oldLead], stats, is_reissue: true, billing_campaign: frozenCampaign } : { source: 'leads', rows: [], stats: { ...stats, total: 0, effectues: 0 }, is_reissue: false, excluded_count: 1 }));
+    else if (request.path === '/campagnes/8/facturation/pa') await fulfillJson(route, apiSuccess(november ? { campaign_id: 8, period_start: '2026-11-01', period_end: '2026-11-30', provider_invoice_id: '123', invoice_number: 'ANTL-MMA-2026-0001', status: 'issued', base_total_ht: 75, total_ht: 115, total_tva: 15, total_ttc: 130, adjustments } : null));
+    else if (request.path === '/campagnes/8/facturation/factur-x') { downloaded = route.request().postDataJSON(); await route.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-original-November' }); }
+    else return false;
+    return true;
+  }, unhandled);
+  await page.goto('/commercial/facturation');
+  await expect(page.getByText(/élément.*déjà facturé.*exclus/)).toBeVisible();
+  await page.getByRole('combobox', { name: 'Période', exact: true }).selectOption('previous_month');
+  await expect(page.getByText(/réédition du document original/)).toBeVisible();
+  await expect(page.getByText('75,00 € HT', { exact: false }).first()).toBeVisible();
+  await expect(page.getByLabel('Libellé 1', { exact: true })).toHaveValue('Pénalité novembre');
+  await expect(page.getByLabel('Commentaire 1', { exact: true })).toHaveValue('Commentaire original');
+  await expect(page.getByRole('button', { name: 'Ajouter un ajustement' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Facture réelle émise' })).toBeDisabled();
+  await page.getByRole('button', { name: /Télécharger la facture/ }).click();
+  await expect.poll(() => downloaded).toMatchObject({ date_debut: '2026-11-01', date_fin: '2026-11-30', adjustments });
+  expect(unhandled).toEqual([]);
 });

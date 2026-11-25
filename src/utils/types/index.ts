@@ -299,10 +299,12 @@ export type {
 } from './vente.types.ts';
 
 export type {
+  InvoiceAdjustment,
   BillingAmounts,
   BillingField,
   BillingPeriod,
   BillingPreview,
+  BillingPreviewMetadata,
   BillingSummaryCard,
   CampaignInvoicePaStatus,
   CampaignBillingSettings,

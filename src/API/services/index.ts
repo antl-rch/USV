@@ -51,6 +51,7 @@ export {
   downloadCampagneFacturXDocumentService,
   sendCampagneFacturationEmailService,
   getCampagneFacturationPaStatusService,
+  getCampagneFacturationPreviewService,
   issueCampagneFacturationThroughPaService,
   testCampagneFacturationThroughPaService,
 } from './campagne.service.ts';

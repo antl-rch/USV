@@ -12,6 +12,8 @@ import type {
   StatutCampagne,
   CampaignInvoicePaStatus,
   ClientAccountBillingMode,
+  InvoiceAdjustment,
+  BillingPreview,
 } from '../../utils/types/index.ts';
 
 interface ApiResponse<T> {
@@ -99,7 +101,7 @@ export const transfererAgentService = async (
 
 export const downloadCampagneFacturXDocumentService = async (
   idCampagne: number,
-  payload: { date_debut: string; date_fin: string; mode?: string; lot_quantity?: number; account_quantity?: number; account_mode?: ClientAccountBillingMode }
+  payload: { adjustments?: InvoiceAdjustment[]; date_debut: string; date_fin: string; mode?: string; lot_quantity?: number; account_quantity?: number; account_mode?: ClientAccountBillingMode }
 ): Promise<Blob> => {
   const response = await axios.post(`/campagnes/${idCampagne}/facturation/factur-x`, payload, {
     headers: {
@@ -114,7 +116,7 @@ export const downloadCampagneFacturXDocumentService = async (
 
 export const sendCampagneFacturationEmailService = async (
   idCampagne: number,
-  payload: { date_debut: string; date_fin: string; recipient_email: string; account_quantity?: number; account_mode?: ClientAccountBillingMode }
+  payload: { adjustments?: InvoiceAdjustment[]; date_debut: string; date_fin: string; recipient_email: string; account_quantity?: number; account_mode?: ClientAccountBillingMode }
 ): Promise<{ success: boolean; message?: string }> => {
   const response: AxiosResponse<{ success: boolean; message?: string }> = await postRequest(
     `/campagnes/${idCampagne}/facturation/email`,
@@ -146,7 +148,7 @@ export const getCampagneFacturationPaStatusService = async (
 
 export const issueCampagneFacturationThroughPaService = async (
   idCampagne: number,
-  payload: { date_debut: string; date_fin: string; account_quantity?: number; account_mode?: ClientAccountBillingMode },
+  payload: { adjustments?: InvoiceAdjustment[]; date_debut: string; date_fin: string; account_quantity?: number; account_mode?: ClientAccountBillingMode },
 ): Promise<CampaignInvoicePaStatus> => {
   const response: AxiosResponse<ApiResponse<CampaignInvoicePaStatus>> = await postRequest(
     `/campagnes/${idCampagne}/facturation/pa`,
@@ -161,7 +163,7 @@ export const issueCampagneFacturationThroughPaService = async (
 
 export const testCampagneFacturationThroughPaService = async (
   idCampagne: number,
-  payload: { date_debut: string; date_fin: string; account_quantity?: number; account_mode?: ClientAccountBillingMode },
+  payload: { adjustments?: InvoiceAdjustment[]; date_debut: string; date_fin: string; account_quantity?: number; account_mode?: ClientAccountBillingMode },
 ): Promise<CampaignInvoicePaStatus> => {
   const response: AxiosResponse<ApiResponse<CampaignInvoicePaStatus>> = await postRequest(
     `/campagnes/${idCampagne}/facturation/pa/test`,
@@ -172,4 +174,11 @@ export const testCampagneFacturationThroughPaService = async (
   }
 
   return response.data.data;
+};
+
+export const getCampagneFacturationPreviewService = async (idCampagne: number, period: { date_debut: string; date_fin: string }): Promise<BillingPreview> => {
+  const query = new URLSearchParams(period);
+  const response: AxiosResponse<ApiResponse<BillingPreview>> = await getRequest(`/campagnes/${idCampagne}/facturation/preview?${query.toString()}`);
+  if (response.data.success && response.data.data) return response.data.data;
+  throw new Error(response.data.message || 'Impossible de charger l’aperçu de facturation.');
 };
