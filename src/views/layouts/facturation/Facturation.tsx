@@ -33,7 +33,7 @@ function Facturation(): ReactElement {
           <section className="facturationView__hero"><div><p className="facturationView__eyebrow">Commercial / Facturation</p><h1>Facturation campagnes</h1><p className="facturationView__subtitle">Espace de préparation pour la génération des factures B2B par campagne et par période.</p></div></section>
           {facturation.error && <div className="facturationView__error">{facturation.error}</div>}
           {facturation.isLoading ? <Loader /> : facturation.activeCampagnes.length === 0 ? (
-            <section className="facturationView__empty"><h2>Aucune campagne active</h2><p>Active d’abord une campagne dans l’USV pour préparer sa facturation.</p></section>
+            <section className="facturationView__empty"><h2>Aucune campagne disponible</h2><p>Créez une campagne dans l’USV pour préparer sa facturation.</p></section>
           ) : (
             <>
               <FacturationFilters state={facturation} />

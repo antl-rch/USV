@@ -98,13 +98,16 @@ export function FacturationPreview({ state }: FacturationPreviewProps): ReactEle
               disabled={state.accountSelectionLocked || state.accountQuantityLimit === 0}
               aria-invalid={state.accountCountValue !== '' && state.accountQuantity === undefined}
               onChange={(event) => state.setAccountCountValue(event.target.value)} />
-            <small>{state.issuedAccountQuantity !== null ? 'Quantité de la facture déjà émise.'
+            <small>{state.issuedAccountQuantity !== null ? 'Quantité conservée pour cette facture.'
               : state.isManualAccountBilling ? 'Saisissez la quantité vendue de comptes à réaliser.'
                 : state.availableAccountCount > 0 ? `De 1 à ${state.availableAccountCount}. Les dossiers les plus anciens sont retenus en premier.`
                   : 'Aucun dossier validé sur la période.'}</small>
           </label>
         </div>
       )}
+      {preview?.is_reissue && <p className="facturationView__warning">Facture déjà émise : réédition du document original, avec ses lignes et ajustements conservés.</p>}
+      {preview?.is_locked && !preview.is_reissue && <p className="facturationView__warning">Émission à reprendre : les éléments et ajustements sont conservés pour cette facture.</p>}
+      {Boolean(preview?.excluded_count) && <p className="facturationView__warning">{preview?.excluded_count} élément(s) déjà facturé(s) ou réservé(s) exclus de cette nouvelle facture.</p>}
       {content}
     </section>
   );

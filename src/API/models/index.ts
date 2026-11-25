@@ -20,6 +20,7 @@ export {
   computeFacturableHt,
   computeFacturableLeadHt,
   computePreviewTotals,
+  computeAdjustedInvoiceTotals,
   computeTtcAmount,
   DEFAULT_LEAD_PRICE_HT,
   getCampaignBillingSettings,

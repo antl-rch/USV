@@ -7,6 +7,7 @@ import {
   computeFacturableHt,
   computeFacturableLeadHt,
   computePreviewTotals,
+  computeAdjustedInvoiceTotals,
   computeTtcAmount,
   getCampaignBillingSettings,
   getLeadBillingSettings,
@@ -213,4 +214,14 @@ test('la facturation compte client utilise le tarif unitaire et exclut les dossi
     assietteHt: 105.5, totalHt: 105.5, totalTtc: 126.6,
   });
   assert.deepEqual(computePreviewTotals(preview, settings, 45, null, null), { assietteHt: 0, totalHt: 0, totalTtc: 0 });
+});
+
+test('les ajustements gardent une assiette HT initiale et une TVA distincte', () => {
+  const result = computeAdjustedInvoiceTotals({ assietteHt: 1000, totalHt: 1000, totalTtc: 1200 }, [
+    { label: 'Retard', comment: 'Paiement tardif', direction: 'addition', unit: 'percent', value: 10, vat: 'none' },
+    { label: 'Remise', comment: '', direction: 'deduction', unit: 'percent', value: 5, vat: 'campaign' },
+    { label: 'Frais', comment: '', direction: 'addition', unit: 'euro', value: 40, vat: 'none' },
+  ], .2);
+  assert.deepEqual(result.totals, { assietteHt: 1000, totalHt: 1090, totalTtc: 1280 });
+  assert.equal(result.error, null);
 });
