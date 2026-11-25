@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   verify:
-    name: Tests et build
+    name: Lint, tests unitaires et build
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -31,17 +31,78 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: '24.22.1'
+          cache: npm
       - run: npm ci --no-audit --no-fund
       - name: Verify
+        env:
+          VITE_HOSTING_PLATFORM: cloudflare
+          VITE_API_BASE_URL: https://api.antl.fr/api
+          VITE_API_TEST_BASE_URL: https://api-test.antl.fr/api
         run: |
           npm run lint
           npm run test:unit
           npm run test:e2e
-          npm run build
-      - name: Install browser
-        run: npx playwright install --with-deps chromium
-      - name: Browser regressions
-        run: npx playwright test
+          NODE_ENV=production npm run build
+      - name: Save validated production bundle
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        with:
+          path: dist
+          key: production-dist-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+  browser:
+    name: Navigateur ${{ matrix.shard }}/4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      CI: 'true'
+      TZ: Europe/Paris
+      NODE_ENV: test
+      DATABASE_TARGET: test
+      BACKGROUND_JOBS_ENABLED: 'false'
+      ENABLE_AUTOMATIC_PUBLISHING: 'false'
+      SOCIAL_PUBLISHING_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --shard=${{ matrix.shard }}/4 --workers=1
+  gate:
+    name: Tests et build
+    if: ${{ always() }}
+    needs: [verify, browser]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every validation job
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        run: test "$VERIFY_RESULT" = success && test "$BROWSER_RESULT" = success
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        with:
+          node-version: '24.22.1'
+      - name: Restore validated production bundle
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        with:
+          path: dist
+          key: production-dist-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: true
       - name: Attest main CI to release server
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
